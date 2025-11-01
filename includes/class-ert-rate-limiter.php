@@ -28,7 +28,7 @@ class ERT_Rate_Limiter {
 	 * @throws Exception If rate limit is exceeded
 	 * @return void
 	 */
-	public function check_rate_limit() {
+	public function check_rate_limit(): void {
 		// Layer 1: Per-user rate limit (cookie-based)
 		$this->check_user_rate_limit();
 
@@ -43,7 +43,7 @@ class ERT_Rate_Limiter {
 	 *
 	 * @return void
 	 */
-	private function check_user_rate_limit() {
+	private function check_user_rate_limit(): void {
 		$user_limit_cookie = 'ert_rate_limit_user';
 		$user_limit = absint(get_option('ert_rate_limit_user', 50));
 
@@ -68,7 +68,7 @@ class ERT_Rate_Limiter {
 	 *
 	 * @return void
 	 */
-	private function check_global_rate_limit() {
+	private function check_global_rate_limit(): void {
 		$global_key = 'ert_global_rate_limit';
 		$global_count = get_transient($global_key);
 		$global_limit = absint(get_option('ert_rate_limit_global', 1000));
@@ -93,7 +93,7 @@ class ERT_Rate_Limiter {
 	 * @param int    $days  Days until expiration (0 = 1 hour)
 	 * @return void
 	 */
-	private function set_secure_cookie($name, $value, $days) {
+	private function set_secure_cookie(string $name, mixed $value, int $days): void {
 		$expires = ($days === 0) ? time() + HOUR_IN_SECONDS : time() + ($days * 24 * 60 * 60);
 
 		$cookie_options = array(

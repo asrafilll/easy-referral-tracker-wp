@@ -178,7 +178,7 @@ EasyReferralTracker still works! We don't use tracking pixels or external analyt
 
 = Can I use multiple shortcodes? =
 
-Yes! Use as many QR codes as you want. Each can have custom settings: `[easyreferraltracker_qr size="400" label="Download Now"]`
+Yes! Use as many QR codes as you want. Each can have custom settings: `[easyreferraltracker_qr size="400" label="Download Now" logo_size="12"]`
 
 == Screenshots ==
 
@@ -192,7 +192,7 @@ Yes! Use as many QR codes as you want. Each can have custom settings: `[easyrefe
 
 == Changelog ==
 
-= 1.0.0 - 2025-01-XX =
+= 1.0.0 - 2025-01-01 =
 * 🎉 Initial release
 * ✨ Privacy-focused tracking (no IP, no user agent)
 * 📱 iOS and Android app store integration

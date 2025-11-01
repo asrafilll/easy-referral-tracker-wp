@@ -25,7 +25,7 @@ class ERT_Tracker {
 	 *
 	 * @var ERT_Database
 	 */
-	private $database;
+	private ERT_Database $database;
 
 	/**
 	 * Constructor
@@ -45,7 +45,7 @@ class ERT_Tracker {
 	 *
 	 * @return void
 	 */
-	public function track_referral() {
+	public function track_referral(): void {
 		// Check if referral code exists in URL
 		if (isset($_GET['r']) && !empty($_GET['r'])) {
 			// Security: Sanitize and validate referral code
@@ -93,7 +93,7 @@ class ERT_Tracker {
 	 * @param int    $days  Days until expiration
 	 * @return void
 	 */
-	private function set_secure_cookie($name, $value, $days) {
+	private function set_secure_cookie(string $name, mixed $value, int $days): void {
 		$cookie_options = array(
 			'expires' => time() + ($days * 24 * 60 * 60),
 			'path' => '/',
@@ -111,7 +111,7 @@ class ERT_Tracker {
 	 *
 	 * @return string
 	 */
-	private function get_request_uri() {
+	private function get_request_uri(): string {
 		if (empty($_SERVER['REQUEST_URI'])) {
 			return '';
 		}
@@ -126,7 +126,7 @@ class ERT_Tracker {
 	 *
 	 * @return void
 	 */
-	public function enqueue_tracker_script() {
+	public function enqueue_tracker_script(): void {
 		// Enqueue the tracker script
 		wp_enqueue_script(
 			'ert-tracker',

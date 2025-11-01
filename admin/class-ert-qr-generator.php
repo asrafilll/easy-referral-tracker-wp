@@ -33,7 +33,7 @@ class ERT_QR_Generator {
 	 *
 	 * @return void
 	 */
-	public function render_page() {
+	public function render_page(): void {
 		// Security: Check user capabilities
 		if (!current_user_can('manage_options')) {
 			wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
@@ -48,7 +48,7 @@ class ERT_QR_Generator {
 	 *
 	 * @return array QR code settings
 	 */
-	public function get_qr_settings() {
+	public function get_qr_settings(): array {
 		return array(
 			'base_url' => get_option('ert_qr_base_url', home_url('/download')),
 			'size' => get_option('ert_qr_size', 300),
@@ -69,7 +69,7 @@ class ERT_QR_Generator {
 	 * @param int    $size         QR code size
 	 * @return string QR code image URL
 	 */
-	public function generate_qr_url($url, $referral = 'test', $size = 300) {
+	public function generate_qr_url(string $url, string $referral = 'test', int $size = 300): string {
 		// Build final URL with referral
 		$final_url = $url . (strpos($url, '?') !== false ? '&' : '?') . 'r=' . urlencode($referral);
 
@@ -82,7 +82,7 @@ class ERT_QR_Generator {
 	 *
 	 * @return string Shortcode example text
 	 */
-	public function get_shortcode_example() {
+	public function get_shortcode_example(): string {
 		return '[easyreferraltracker_qr]';
 	}
 
@@ -91,7 +91,7 @@ class ERT_QR_Generator {
 	 *
 	 * @return string Shortcode with attributes example
 	 */
-	public function get_shortcode_with_atts_example() {
+	public function get_shortcode_with_atts_example(): string {
 		return '[easyreferraltracker_qr size="250" label="Download App"]';
 	}
 }

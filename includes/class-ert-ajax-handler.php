@@ -25,14 +25,21 @@ class ERT_AJAX_Handler {
 	 *
 	 * @var ERT_Database
 	 */
-	private $database;
+	private ERT_Database $database;
 
 	/**
 	 * Rate limiter
 	 *
 	 * @var ERT_Rate_Limiter
 	 */
-	private $rate_limiter;
+	private ERT_Rate_Limiter $rate_limiter;
+
+	/**
+	 * Error handler
+	 *
+	 * @var ERT_Error_Handler
+	 */
+	private ERT_Error_Handler $error_handler;
 
 	/**
 	 * Constructor
@@ -40,6 +47,7 @@ class ERT_AJAX_Handler {
 	public function __construct() {
 		$this->database = new ERT_Database();
 		$this->rate_limiter = new ERT_Rate_Limiter();
+		$this->error_handler = ERT_Error_Handler::get_instance();
 
 		// Register AJAX handlers
 		add_action('wp_ajax_ert_track_click', array($this, 'track_click'));
@@ -53,18 +61,39 @@ class ERT_AJAX_Handler {
 	 *
 	 * @return void
 	 */
-	public function track_click() {
+	public function track_click(): void {
 		// Security: Verify nonce
 		if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ert_track_click')) {
+			$this->error_handler->log_security_event(
+				'Invalid nonce in track_click AJAX request',
+				['post_data' => $_POST],
+				'ERT_AJAX_Handler::track_click'
+			);
 			wp_send_json_error(array('message' => 'Invalid security token'), 403);
 			wp_die();
 		}
 
 		// Check rate limit
-		$this->rate_limiter->check_rate_limit();
+		try {
+			$this->rate_limiter->check_rate_limit();
+		} catch (Exception $e) {
+			$this->error_handler->log_error(
+				'Rate limit exceeded in track_click',
+				ERT_Error_Handler::LEVEL_WARNING,
+				['exception' => $e->getMessage()],
+				'ERT_AJAX_Handler::track_click'
+			);
+			throw $e;
+		}
 
 		// Security: Check if required fields exist
 		if (!isset($_POST['referral_code']) || !isset($_POST['platform'])) {
+			$this->error_handler->log_validation_error(
+				'required_fields',
+				$_POST,
+				'missing referral_code or platform',
+				'ERT_AJAX_Handler::track_click'
+			);
 			wp_send_json_error(array('message' => 'Missing required fields'), 400);
 			wp_die();
 		}
@@ -75,12 +104,24 @@ class ERT_AJAX_Handler {
 
 		// Security: Validate referral code format
 		if (!preg_match('/^[a-zA-Z0-9_-]{1,100}$/', $referral_code)) {
+			$this->error_handler->log_validation_error(
+				'referral_code',
+				$referral_code,
+				'invalid format (must be alphanumeric, dash, underscore, 1-100 chars)',
+				'ERT_AJAX_Handler::track_click'
+			);
 			wp_send_json_error(array('message' => 'Invalid referral code format'), 400);
 			wp_die();
 		}
 
 		// Security: Validate platform
 		if (!in_array($platform, array('ios', 'android'), true)) {
+			$this->error_handler->log_validation_error(
+				'platform',
+				$platform,
+				'must be ios or android',
+				'ERT_AJAX_Handler::track_click'
+			);
 			wp_send_json_error(array('message' => 'Invalid platform'), 400);
 			wp_die();
 		}

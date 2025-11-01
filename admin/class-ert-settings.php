@@ -32,7 +32,7 @@ class ERT_Settings {
 	 *
 	 * @return void
 	 */
-	public function register_settings() {
+	public function register_settings(): void {
 		// General settings
 		$this->register_general_settings();
 
@@ -48,7 +48,7 @@ class ERT_Settings {
 	 *
 	 * @return void
 	 */
-	private function register_general_settings() {
+	private function register_general_settings(): void {
 		register_setting('ert_general_settings', 'ert_cookie_days', array(
 			'type' => 'integer',
 			'sanitize_callback' => 'absint',
@@ -73,7 +73,7 @@ class ERT_Settings {
 	 *
 	 * @return void
 	 */
-	private function register_appstore_settings() {
+	private function register_appstore_settings(): void {
 		register_setting('ert_appstore_settings', 'ert_ios_app_id', array(
 			'type' => 'string',
 			'sanitize_callback' => 'sanitize_text_field',
@@ -98,7 +98,7 @@ class ERT_Settings {
 	 *
 	 * @return void
 	 */
-	private function register_qr_settings() {
+	private function register_qr_settings(): void {
 		register_setting('ert_qr_settings', 'ert_qr_base_url', array(
 			'type' => 'string',
 			'sanitize_callback' => 'esc_url_raw',
@@ -146,6 +146,12 @@ class ERT_Settings {
 			'sanitize_callback' => 'sanitize_hex_color',
 			'default' => '#E5E7EB',
 		));
+
+		register_setting('ert_qr_settings', 'ert_qr_logo_size', array(
+			'type' => 'integer',
+			'sanitize_callback' => 'absint',
+			'default' => 15,
+		));
 	}
 
 	/**
@@ -155,7 +161,7 @@ class ERT_Settings {
 	 * @param mixed  $default Default value
 	 * @return mixed
 	 */
-	public static function get($key, $default = '') {
+	public static function get(string $key, mixed $default = ''): mixed {
 		return get_option($key, $default);
 	}
 
@@ -166,7 +172,7 @@ class ERT_Settings {
 	 * @param mixed  $value Setting value
 	 * @return bool
 	 */
-	public static function update($key, $value) {
+	public static function update(string $key, mixed $value): bool {
 		return update_option($key, $value);
 	}
 
@@ -176,7 +182,7 @@ class ERT_Settings {
 	 * @param string $key Setting key
 	 * @return bool
 	 */
-	public static function delete($key) {
+	public static function delete(string $key): bool {
 		return delete_option($key);
 	}
 }

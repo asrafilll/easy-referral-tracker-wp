@@ -25,7 +25,7 @@ class ERT_Dashboard {
 	 *
 	 * @var ERT_Database
 	 */
-	private $database;
+	private ERT_Database $database;
 
 	/**
 	 * Constructor
@@ -39,7 +39,7 @@ class ERT_Dashboard {
 	 *
 	 * @return void
 	 */
-	public function render_page() {
+	public function render_page(): void {
 		// Security: Check user capabilities
 		if (!current_user_can('manage_options')) {
 			wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
@@ -60,7 +60,7 @@ class ERT_Dashboard {
 	 *
 	 * @return array Dashboard statistics and data
 	 */
-	public function get_dashboard_data() {
+	public function get_dashboard_data(): array {
 		return array(
 			'total_visits' => $this->database->get_total_visits(),
 			'unique_referrals' => $this->database->get_unique_referrals(),
@@ -76,7 +76,7 @@ class ERT_Dashboard {
 	 *
 	 * @return int
 	 */
-	public function get_total_visits() {
+	public function get_total_visits(): int {
 		return $this->database->get_total_visits();
 	}
 
@@ -85,7 +85,7 @@ class ERT_Dashboard {
 	 *
 	 * @return int
 	 */
-	public function get_unique_referrals() {
+	public function get_unique_referrals(): int {
 		return $this->database->get_unique_referrals();
 	}
 
@@ -94,7 +94,7 @@ class ERT_Dashboard {
 	 *
 	 * @return int
 	 */
-	public function get_total_clicks() {
+	public function get_total_clicks(): int {
 		return $this->database->get_total_clicks();
 	}
 
@@ -103,7 +103,7 @@ class ERT_Dashboard {
 	 *
 	 * @return int
 	 */
-	public function get_today_visits() {
+	public function get_today_visits(): int {
 		return $this->database->get_today_visits();
 	}
 
@@ -113,7 +113,7 @@ class ERT_Dashboard {
 	 * @param int $limit Number of results
 	 * @return array
 	 */
-	public function get_top_referrals($limit = 20) {
+	public function get_top_referrals(int $limit = 20): array {
 		return $this->database->get_top_referrals($limit);
 	}
 
@@ -123,7 +123,7 @@ class ERT_Dashboard {
 	 * @param int $limit Number of results
 	 * @return array
 	 */
-	public function get_recent_activity($limit = 50) {
+	public function get_recent_activity(int $limit = 50): array {
 		return $this->database->get_recent_activity($limit);
 	}
 
@@ -134,7 +134,7 @@ class ERT_Dashboard {
 	 * @param int $clicks Total clicks
 	 * @return float Click rate percentage
 	 */
-	public function calculate_click_rate($visits, $clicks) {
+	public function calculate_click_rate(int $visits, int $clicks): float {
 		if ($visits === 0) {
 			return 0.0;
 		}

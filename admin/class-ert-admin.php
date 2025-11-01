@@ -25,14 +25,14 @@ class ERT_Admin {
 	 *
 	 * @var ERT_Dashboard
 	 */
-	private $dashboard;
+	private ERT_Dashboard $dashboard;
 
 	/**
 	 * QR Generator handler
 	 *
 	 * @var ERT_QR_Generator
 	 */
-	private $qr_generator;
+	private ERT_QR_Generator $qr_generator;
 
 	/**
 	 * Constructor
@@ -52,7 +52,7 @@ class ERT_Admin {
 	 *
 	 * @return void
 	 */
-	public function add_admin_menu() {
+	public function add_admin_menu(): void {
 		// Main dashboard page
 		add_menu_page(
 			__('EasyReferralTracker', 'easyreferraltracker'),
@@ -91,7 +91,7 @@ class ERT_Admin {
 	 * @param string $hook Current admin page hook
 	 * @return void
 	 */
-	public function enqueue_admin_scripts($hook) {
+	public function enqueue_admin_scripts(string $hook): void {
 		// Only load on our plugin pages
 		if (strpos($hook, 'easyreferraltracker') === false) {
 			return;
@@ -134,7 +134,7 @@ class ERT_Admin {
 	 *
 	 * @return void
 	 */
-	public function render_settings_page() {
+	public function render_settings_page(): void {
 		// Security: Check user capabilities
 		if (!current_user_can('manage_options')) {
 			wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
@@ -148,7 +148,7 @@ class ERT_Admin {
 	 *
 	 * @return ERT_Dashboard
 	 */
-	public function get_dashboard() {
+	public function get_dashboard(): ERT_Dashboard {
 		return $this->dashboard;
 	}
 
@@ -157,7 +157,7 @@ class ERT_Admin {
 	 *
 	 * @return ERT_QR_Generator
 	 */
-	public function get_qr_generator() {
+	public function get_qr_generator(): ERT_QR_Generator {
 		return $this->qr_generator;
 	}
 }

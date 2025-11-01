@@ -25,56 +25,63 @@ class ERT_Plugin {
 	 *
 	 * @var ERT_Plugin|null
 	 */
-	private static $instance = null;
+	private static ?ERT_Plugin $instance = null;
 
 	/**
 	 * Database handler instance
 	 *
-	 * @var ERT_Database
+	 * @var ERT_Database|null
 	 */
-	private $database;
+	private ?ERT_Database $database = null;
 
 	/**
 	 * Tracker instance
 	 *
-	 * @var ERT_Tracker
+	 * @var ERT_Tracker|null
 	 */
-	private $tracker;
+	private ?ERT_Tracker $tracker = null;
 
 	/**
 	 * Admin instance
 	 *
-	 * @var ERT_Admin
+	 * @var ERT_Admin|null
 	 */
-	private $admin;
+	private ?ERT_Admin $admin = null;
 
 	/**
 	 * AJAX handler instance
 	 *
-	 * @var ERT_AJAX_Handler
+	 * @var ERT_AJAX_Handler|null
 	 */
-	private $ajax_handler;
+	private ?ERT_AJAX_Handler $ajax_handler = null;
 
 	/**
 	 * Settings instance
 	 *
-	 * @var ERT_Settings
+	 * @var ERT_Settings|null
 	 */
-	private $settings;
+	private ?ERT_Settings $settings = null;
 
 	/**
 	 * Shortcodes instance
 	 *
-	 * @var ERT_Shortcodes
+	 * @var ERT_Shortcodes|null
 	 */
-	private $shortcodes;
+	private ?ERT_Shortcodes $shortcodes = null;
+
+	/**
+	 * Error handler instance
+	 *
+	 * @var ERT_Error_Handler|null
+	 */
+	private ?ERT_Error_Handler $error_handler = null;
 
 	/**
 	 * Get singleton instance
 	 *
 	 * @return ERT_Plugin
 	 */
-	public static function get_instance() {
+	public static function get_instance(): ERT_Plugin {
 		if (null === self::$instance) {
 			self::$instance = new self();
 		}
@@ -102,31 +109,66 @@ class ERT_Plugin {
 	 *
 	 * @return void
 	 */
-	public function init() {
+	public function init(): void {
+		// Initialize error handler first
+		$this->error_handler = ERT_Error_Handler::get_instance();
+
 		// Security: Check WordPress version
 		if (version_compare(get_bloginfo('version'), '5.0', '<')) {
+			$this->error_handler->log_error(
+				'WordPress version too old',
+				ERT_Error_Handler::LEVEL_ERROR,
+				['wp_version' => get_bloginfo('version')],
+				'ERT_Plugin::init'
+			);
 			add_action('admin_notices', array($this, 'old_wordpress_notice'));
 			return;
 		}
 
 		// Initialize database handler
-		$this->database = new ERT_Database();
+		try {
+			$this->database = new ERT_Database();
+		} catch (Throwable $e) {
+			$this->error_handler->handle_exception($e);
+			$this->error_handler->add_admin_notice('Failed to initialize database handler.');
+			return;
+		}
 
 		// Initialize tracker (frontend)
-		$this->tracker = new ERT_Tracker();
+		try {
+			$this->tracker = new ERT_Tracker();
+		} catch (Throwable $e) {
+			$this->error_handler->handle_exception($e);
+		}
 
 		// Initialize AJAX handler
-		$this->ajax_handler = new ERT_AJAX_Handler();
+		try {
+			$this->ajax_handler = new ERT_AJAX_Handler();
+		} catch (Throwable $e) {
+			$this->error_handler->handle_exception($e);
+		}
 
 		// Initialize settings
-		$this->settings = new ERT_Settings();
+		try {
+			$this->settings = new ERT_Settings();
+		} catch (Throwable $e) {
+			$this->error_handler->handle_exception($e);
+		}
 
 		// Initialize shortcodes
-		$this->shortcodes = new ERT_Shortcodes();
+		try {
+			$this->shortcodes = new ERT_Shortcodes();
+		} catch (Throwable $e) {
+			$this->error_handler->handle_exception($e);
+		}
 
 		// Initialize admin (only in admin area)
 		if (is_admin()) {
-			$this->admin = new ERT_Admin();
+			try {
+				$this->admin = new ERT_Admin();
+			} catch (Throwable $e) {
+				$this->error_handler->handle_exception($e);
+			}
 		}
 
 		// Check database version
@@ -138,7 +180,7 @@ class ERT_Plugin {
 	 *
 	 * @return void
 	 */
-	public function old_wordpress_notice() {
+	public function old_wordpress_notice(): void {
 		echo '<div class="notice notice-error"><p>';
 		echo esc_html__('EasyReferralTracker requires WordPress 5.0 or higher.', 'easyreferraltracker');
 		echo '</p></div>';
@@ -151,7 +193,7 @@ class ERT_Plugin {
 	 *
 	 * @return void
 	 */
-	public function activate() {
+	public function activate(): void {
 		// Security: Check user capabilities
 		if (!current_user_can('activate_plugins')) {
 			return;
@@ -189,7 +231,7 @@ class ERT_Plugin {
 	 *
 	 * @return void
 	 */
-	public function deactivate() {
+	public function deactivate(): void {
 		// Security: Check user capabilities
 		if (!current_user_can('activate_plugins')) {
 			return;
@@ -204,7 +246,7 @@ class ERT_Plugin {
 	 *
 	 * @return ERT_Database
 	 */
-	public function get_database() {
+	public function get_database(): ?ERT_Database {
 		return $this->database;
 	}
 
@@ -213,7 +255,7 @@ class ERT_Plugin {
 	 *
 	 * @return ERT_Tracker
 	 */
-	public function get_tracker() {
+	public function get_tracker(): ?ERT_Tracker {
 		return $this->tracker;
 	}
 
@@ -222,7 +264,16 @@ class ERT_Plugin {
 	 *
 	 * @return ERT_Admin|null
 	 */
-	public function get_admin() {
+	public function get_admin(): ?ERT_Admin {
 		return $this->admin;
+	}
+
+	/**
+	 * Get error handler instance
+	 *
+	 * @return ERT_Error_Handler|null
+	 */
+	public function get_error_handler(): ?ERT_Error_Handler {
+		return $this->error_handler;
 	}
 }
