@@ -1,0 +1,818 @@
+<?php
+/**
+ * Plugin Name: EasyReferralTracker
+ * Plugin URI: https://github.com/asrafilll/easyreferraltracker
+ * Description: Privacy-focused referral tracking system for app downloads with analytics dashboard and dynamic QR codes
+ * Version: 1.0.0
+ * Author: EasyReferralTracker Team
+ * Author URI: https://github.com/asrafilll/easyreferraltracker
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: easyreferraltracker
+ * Requires at least: 5.0
+ * Requires PHP: 7.2
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Define plugin constants
+define('EASYREFERRALTRACKER_VERSION', '1.0.0');
+define('EASYREFERRALTRACKER_DB_VERSION', '1.0.0');
+define('EASYREFERRALTRACKER_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('EASYREFERRALTRACKER_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+/**
+ * Main Plugin Class
+ */
+class EasyReferralTracker {
+    
+    private static $instance = null;
+    
+    /**
+     * Singleton instance
+     */
+    public static function get_instance() {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    /**
+     * Constructor
+     */
+    private function __construct() {
+        // Activation/Deactivation hooks
+        register_activation_hook(__FILE__, array($this, 'activate'));
+        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        
+        // Initialize plugin
+        add_action('plugins_loaded', array($this, 'init'));
+    }
+    
+    /**
+     * Initialize plugin
+     */
+    public function init() {
+        // Security: Check WordPress version
+        if (version_compare(get_bloginfo('version'), '5.0', '<')) {
+            add_action('admin_notices', array($this, 'old_wordpress_notice'));
+            return;
+        }
+        
+        // Initialize components
+        add_action('init', array($this, 'track_referral'), 1);
+        add_action('wp_footer', array($this, 'add_tracking_script'), 999);
+        add_action('admin_menu', array($this, 'add_admin_menu'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        
+        // AJAX handlers with strict security
+        add_action('wp_ajax_ert_track_click', array($this, 'ajax_track_click'));
+        add_action('wp_ajax_nopriv_ert_track_click', array($this, 'ajax_track_click'));
+        
+        // Settings
+        add_action('admin_init', array($this, 'register_settings'));
+        
+        // Shortcodes
+        add_shortcode('easyreferraltracker_qr', array($this, 'render_qr_code_shortcode'));
+        
+        // Check database version
+        add_action('admin_init', array($this, 'check_db_version'));
+    }
+    
+    /**
+     * Admin notice for old WordPress versions
+     */
+    public function old_wordpress_notice() {
+        echo '<div class="notice notice-error"><p>';
+        echo esc_html__('EasyReferralTracker requires WordPress 5.0 or higher.', 'easyreferraltracker');
+        echo '</p></div>';
+    }
+    
+    /**
+     * Plugin Activation
+     */
+    public function activate() {
+        // Security: Check user capabilities
+        if (!current_user_can('activate_plugins')) {
+            return;
+        }
+        
+        $this->create_tables();
+        flush_rewrite_rules();
+        
+        // Set default options securely
+        add_option('ert_cookie_days', 30, '', 'no');
+        add_option('ert_rate_limit_user', 50, '', 'no'); // Per user per hour
+        add_option('ert_rate_limit_global', 1000, '', 'no'); // Site-wide per hour
+        add_option('ert_db_version', EASYREFERRALTRACKER_DB_VERSION, '', 'no');
+    }
+    
+    /**
+     * Plugin Deactivation
+     */
+    public function deactivate() {
+        // Security: Check user capabilities
+        if (!current_user_can('activate_plugins')) {
+            return;
+        }
+        
+        flush_rewrite_rules();
+    }
+    
+    /**
+     * Check and upgrade database if needed
+     */
+    public function check_db_version() {
+        $current_db_version = get_option('ert_db_version', '0');
+        
+        if (version_compare($current_db_version, EASYREFERRALTRACKER_DB_VERSION, '<')) {
+            $this->upgrade_database();
+            update_option('ert_db_version', EASYREFERRALTRACKER_DB_VERSION);
+        }
+    }
+    
+    /**
+     * Upgrade database schema
+     */
+    private function upgrade_database() {
+        global $wpdb;
+        
+        // Drop old IP and user_agent columns if they exist (privacy cleanup)
+        $table_visits = $wpdb->prefix . 'ert_referral_visits';
+        $table_clicks = $wpdb->prefix . 'ert_link_clicks';
+        
+        $wpdb->query("ALTER TABLE $table_visits DROP COLUMN IF EXISTS visitor_ip");
+        $wpdb->query("ALTER TABLE $table_visits DROP COLUMN IF EXISTS user_agent");
+        $wpdb->query("ALTER TABLE $table_visits DROP COLUMN IF EXISTS session_id");
+        $wpdb->query("ALTER TABLE $table_clicks DROP COLUMN IF EXISTS visitor_ip");
+        
+        // Recreate tables with new schema
+        $this->create_tables();
+    }
+    
+    /**
+     * Create Database Tables - Privacy-focused (no IP, no User Agent)
+     */
+    private function create_tables() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        // Referral visits table - PRIVACY FOCUSED
+        $table_visits = $wpdb->prefix . 'ert_referral_visits';
+        $sql_visits = "CREATE TABLE IF NOT EXISTS $table_visits (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            referral_code varchar(100) NOT NULL,
+            landing_page varchar(500) DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY referral_code (referral_code(20)),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        // Link clicks table - PRIVACY FOCUSED
+        $table_clicks = $wpdb->prefix . 'ert_link_clicks';
+        $sql_clicks = "CREATE TABLE IF NOT EXISTS $table_clicks (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            referral_code varchar(100) NOT NULL,
+            platform varchar(20) NOT NULL,
+            clicked_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY referral_code (referral_code(20)),
+            KEY platform (platform(10)),
+            KEY clicked_at (clicked_at)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql_visits);
+        dbDelta($sql_clicks);
+    }
+    
+    /**
+     * Track Referral Code from URL - Privacy-focused (no IP, no sessions)
+     */
+    public function track_referral() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ert_referral_visits';
+        
+        // Check if referral code exists in URL
+        if (isset($_GET['r']) && !empty($_GET['r'])) {
+            // Security: Sanitize and validate referral code
+            $referral_code = sanitize_text_field(wp_unslash($_GET['r']));
+            
+            // Security: Validate referral code format (alphanumeric, dash, underscore only, max 100 chars)
+            if (!preg_match('/^[a-zA-Z0-9_-]{1,100}$/', $referral_code)) {
+                return;
+            }
+        } else {
+            // No referral code in URL - check if user already has a cookie
+            $existing_cookie = isset($_COOKIE['ert_referral']) ? sanitize_text_field($_COOKIE['ert_referral']) : '';
+            
+            // If no existing cookie, set default to "homepage"
+            if (empty($existing_cookie)) {
+                $referral_code = 'homepage';
+            } else {
+                // User already has a referral code, don't override
+                return;
+            }
+        }
+        
+        // Check if already tracked for this referral code using cookie
+        $tracking_cookie = 'ert_tracked_' . md5($referral_code);
+        
+        if (!isset($_COOKIE[$tracking_cookie])) {
+            // Track the visit - PRIVACY: No IP, no user agent, no session
+            $wpdb->insert(
+                $table_name,
+                array(
+                    'referral_code' => $referral_code,
+                    'landing_page' => $this->get_request_uri()
+                ),
+                array('%s', '%s')
+            );
+            
+            // Set tracking cookie to prevent duplicates
+            $cookie_days = absint(get_option('ert_cookie_days', 30));
+            $this->set_secure_cookie($tracking_cookie, time(), $cookie_days);
+        }
+        
+        // Set or update referral cookie
+        $cookie_days = absint(get_option('ert_cookie_days', 30));
+        $this->set_secure_cookie('ert_referral', $referral_code, $cookie_days);
+    }
+    
+    /**
+     * Set secure cookie with proper flags
+     */
+    private function set_secure_cookie($name, $value, $days) {
+        $cookie_options = array(
+            'expires' => time() + ($days * 24 * 60 * 60),
+            'path' => '/',
+            'domain' => '',
+            'secure' => is_ssl(),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        );
+        
+        setcookie($name, $value, $cookie_options);
+    }
+    
+    /**
+     * Get Request URI - Sanitized
+     */
+    private function get_request_uri() {
+        if (empty($_SERVER['REQUEST_URI'])) {
+            return '';
+        }
+        // Security: Sanitize and limit length
+        return substr(esc_url_raw($_SERVER['REQUEST_URI']), 0, 500);
+    }
+    
+    /**
+     * Add Tracking Script to Frontend
+     */
+    public function add_tracking_script() {
+        $cookie_days = absint(get_option('ert_cookie_days', 30));
+        $ios_app_id = sanitize_text_field(get_option('ert_ios_app_id', ''));
+        $android_package = sanitize_text_field(get_option('ert_android_package', ''));
+        $provider_token = sanitize_text_field(get_option('ert_provider_token', ''));
+        
+        // Security: Create nonce
+        $nonce = wp_create_nonce('ert_track_click');
+        ?>
+        <script>
+        (function() {
+            'use strict';
+            
+            const COOKIE_NAME = 'ert_referral';
+            const COOKIE_DAYS = <?php echo absint($cookie_days); ?>;
+            const AJAX_URL = <?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>;
+            const NONCE = <?php echo wp_json_encode($nonce); ?>;
+            
+            function getCookie(name) {
+                const value = '; ' + document.cookie;
+                const parts = value.split('; ' + name + '=');
+                if (parts.length === 2) {
+                    return parts.pop().split(';').shift();
+                }
+                return null;
+            }
+            
+            function setCookie(name, value, days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                const expires = "expires=" + date.toUTCString();
+                const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+                document.cookie = name + "=" + encodeURIComponent(value) + "; " + expires + "; path=/; SameSite=Lax" + secure;
+            }
+            
+            function trackLinkClick(platform, referralCode) {
+                // Security: Validate inputs
+                if (!platform || !referralCode) return;
+                if (!['ios', 'android'].includes(platform)) return;
+                
+                // Send AJAX request
+                const formData = new FormData();
+                formData.append('action', 'ert_track_click');
+                formData.append('nonce', NONCE);
+                formData.append('referral_code', referralCode);
+                formData.append('platform', platform);
+                
+                fetch(AJAX_URL, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                }).catch(function(error) {
+                    // Silent error handling
+                });
+            }
+            
+            function captureReferralCode() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const referralCode = urlParams.get('r');
+                
+                if (referralCode) {
+                    // Security: Validate referral code format
+                    if (/^[a-zA-Z0-9_-]{1,100}$/.test(referralCode)) {
+                        setCookie(COOKIE_NAME, referralCode, COOKIE_DAYS);
+                        return referralCode;
+                    }
+                }
+                
+                return getCookie(COOKIE_NAME);
+            }
+            
+            function updateAppStoreLinks() {
+                const referralCode = getCookie(COOKIE_NAME);
+                
+                if (!referralCode) {
+                    return;
+                }
+                
+                // Security: Validate referral code before using
+                if (!/^[a-zA-Z0-9_-]{1,100}$/.test(referralCode)) {
+                    return;
+                }
+                
+                // Update iOS links
+                const iosLinks = document.querySelectorAll('a[href*="apps.apple.com"]');
+                
+                iosLinks.forEach(function(link) {
+                    try {
+                        const url = new URL(link.href);
+                        url.searchParams.set('ct', referralCode);
+                        url.searchParams.set('mt', '8');
+                        <?php if (!empty($provider_token)): ?>
+                        url.searchParams.set('pt', <?php echo wp_json_encode($provider_token); ?>);
+                        <?php endif; ?>
+                        link.href = url.toString();
+                        
+                        // Add click tracking
+                        link.addEventListener('click', function(e) {
+                            trackLinkClick('ios', referralCode);
+                        }, { once: true });
+                        
+                    } catch (e) {
+                        // Silent error handling
+                    }
+                });
+                
+                // Update Android links
+                const androidLinks = document.querySelectorAll('a[href*="play.google.com"]');
+                
+                androidLinks.forEach(function(link) {
+                    try {
+                        const url = new URL(link.href);
+                        const referrerValue = 'utm_source=referral&utm_medium=website&utm_campaign=app&utm_content=' + encodeURIComponent(referralCode);
+                        url.searchParams.set('referrer', referrerValue);
+                        link.href = url.toString();
+                        
+                        // Add click tracking
+                        link.addEventListener('click', function(e) {
+                            trackLinkClick('android', referralCode);
+                        }, { once: true });
+                        
+                    } catch (e) {
+                        // Silent error handling
+                    }
+                });
+            }
+            
+            function init() {
+                captureReferralCode();
+                updateAppStoreLinks();
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+        </script>
+        <?php
+    }
+    
+    /**
+     * AJAX: Track Link Click - Enhanced Security with Cookie-based Rate Limiting
+     */
+    public function ajax_track_click() {
+        // Security: Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ert_track_click')) {
+            wp_send_json_error(array('message' => 'Invalid security token'), 403);
+            wp_die();
+        }
+        
+        // Cookie-based rate limiting (per user)
+        $this->check_rate_limit();
+        
+        // Security: Check if required fields exist
+        if (!isset($_POST['referral_code']) || !isset($_POST['platform'])) {
+            wp_send_json_error(array('message' => 'Missing required fields'), 400);
+            wp_die();
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'ert_link_clicks';
+        
+        // Security: Sanitize and validate inputs
+        $referral_code = sanitize_text_field(wp_unslash($_POST['referral_code']));
+        $platform = sanitize_text_field(wp_unslash($_POST['platform']));
+        
+        // Security: Validate referral code format
+        if (!preg_match('/^[a-zA-Z0-9_-]{1,100}$/', $referral_code)) {
+            wp_send_json_error(array('message' => 'Invalid referral code format'), 400);
+            wp_die();
+        }
+        
+        // Security: Validate platform
+        if (!in_array($platform, array('ios', 'android'), true)) {
+            wp_send_json_error(array('message' => 'Invalid platform'), 400);
+            wp_die();
+        }
+        
+        // Security: Use prepared statement - PRIVACY: No IP tracking
+        $result = $wpdb->insert(
+            $table_name,
+            array(
+                'referral_code' => $referral_code,
+                'platform' => $platform
+            ),
+            array('%s', '%s')
+        );
+        
+        if ($result) {
+            wp_send_json_success(array('message' => 'Tracked'), 200);
+        } else {
+            wp_send_json_error(array('message' => 'Database error'), 500);
+        }
+        
+        wp_die();
+    }
+    
+    /**
+     * Cookie-based Rate Limiting (GDPR-compliant, no IP tracking)
+     */
+    private function check_rate_limit() {
+        // Layer 1: Per-user rate limit (cookie-based)
+        $user_limit_cookie = 'ert_rate_limit_user';
+        $user_limit = absint(get_option('ert_rate_limit_user', 50));
+        
+        if (isset($_COOKIE[$user_limit_cookie])) {
+            $user_count = absint($_COOKIE[$user_limit_cookie]);
+            if ($user_count >= $user_limit) {
+                wp_die(esc_html__('Rate limit exceeded. Please try again later.', 'easyreferraltracker'), 429);
+            }
+            $this->set_secure_cookie($user_limit_cookie, $user_count + 1, 0); // 1 hour
+        } else {
+            $this->set_secure_cookie($user_limit_cookie, 1, 0); // 1 hour
+        }
+        
+        // Layer 2: Global site-wide rate limit (prevents DDoS)
+        $global_key = 'ert_global_rate_limit';
+        $global_count = get_transient($global_key);
+        $global_limit = absint(get_option('ert_rate_limit_global', 1000));
+        
+        if ($global_count === false) {
+            set_transient($global_key, 1, HOUR_IN_SECONDS);
+        } elseif ($global_count >= $global_limit) {
+            wp_die(esc_html__('Site rate limit exceeded. Please try again later.', 'easyreferraltracker'), 429);
+        } else {
+            set_transient($global_key, $global_count + 1, HOUR_IN_SECONDS);
+        }
+    }
+    
+    /**
+     * Add Admin Menu
+     */
+    public function add_admin_menu() {
+        // Security: Check capabilities
+        add_menu_page(
+            __('EasyReferralTracker', 'easyreferraltracker'),
+            __('EasyReferralTracker', 'easyreferraltracker'),
+            'manage_options',
+            'easyreferraltracker',
+            array($this, 'admin_dashboard_page'),
+            'dashicons-chart-line',
+            30
+        );
+        
+        add_submenu_page(
+            'easyreferraltracker',
+            __('QR Code Generator', 'easyreferraltracker'),
+            __('QR Generator', 'easyreferraltracker'),
+            'manage_options',
+            'easyreferraltracker-qr-generator',
+            array($this, 'admin_qr_generator_page')
+        );
+        
+        add_submenu_page(
+            'easyreferraltracker',
+            __('Settings', 'easyreferraltracker'),
+            __('Settings', 'easyreferraltracker'),
+            'manage_options',
+            'easyreferraltracker-settings',
+            array($this, 'admin_settings_page')
+        );
+    }
+    
+    /**
+     * Register Settings
+     */
+    public function register_settings() {
+        // General settings
+        register_setting('ert_general_settings', 'ert_cookie_days', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 30
+        ));
+        
+        register_setting('ert_general_settings', 'ert_rate_limit_user', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 50
+        ));
+        
+        register_setting('ert_general_settings', 'ert_rate_limit_global', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 1000
+        ));
+        
+        // App Store settings
+        register_setting('ert_appstore_settings', 'ert_ios_app_id', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('ert_appstore_settings', 'ert_android_package', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('ert_appstore_settings', 'ert_provider_token', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        // QR Code settings
+        register_setting('ert_qr_settings', 'ert_qr_base_url', array(
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => home_url('/download')
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_size', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 300
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_label', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'Scan to Download'
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_logo', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 0
+        ));
+        
+        // QR Code container styling
+        register_setting('ert_qr_settings', 'ert_qr_padding', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 20
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_border_radius', array(
+            'type' => 'integer',
+            'sanitize_callback' => 'absint',
+            'default' => 10
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_container_color', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'default' => '#FFFFFF'
+        ));
+        
+        register_setting('ert_qr_settings', 'ert_qr_border_color', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'default' => '#E5E7EB'
+        ));
+    }
+    
+    /**
+     * Enqueue Admin Scripts
+     */
+    public function enqueue_admin_scripts($hook) {
+        if (strpos($hook, 'easyreferraltracker') === false) {
+            return;
+        }
+        
+        // Enqueue media uploader for QR logo
+        if ($hook === 'easyreferraltracker_page_easyreferraltracker-qr-generator' || strpos($hook, 'qr-generator') !== false) {
+            wp_enqueue_media();
+            wp_enqueue_style('wp-color-picker');
+            wp_enqueue_script('wp-color-picker');
+        }
+    }
+    
+    /**
+     * Render QR Code Shortcode
+     */
+    public function render_qr_code_shortcode($atts) {
+        // Parse attributes
+        $atts = shortcode_atts(array(
+            'size' => get_option('ert_qr_size', 300),
+            'url' => get_option('ert_qr_base_url', home_url('/download')),
+            'label' => get_option('ert_qr_label', 'Scan to Download'),
+            'padding' => get_option('ert_qr_padding', 20),
+            'border_radius' => get_option('ert_qr_border_radius', 10),
+            'container_color' => get_option('ert_qr_container_color', '#FFFFFF'),
+            'border_color' => get_option('ert_qr_border_color', '#E5E7EB')
+        ), $atts, 'easyreferraltracker_qr');
+        
+        // Sanitize
+        $size = absint($atts['size']);
+        $size = max(100, min(500, $size)); // Clamp between 100-500
+        $base_url = esc_url($atts['url']);
+        $label = sanitize_text_field($atts['label']);
+        $padding = absint($atts['padding']);
+        $padding = max(0, min(100, $padding)); // Clamp between 0-100
+        $border_radius = absint($atts['border_radius']);
+        $border_radius = max(0, min(50, $border_radius)); // Clamp between 0-50
+        $container_color = sanitize_hex_color($atts['container_color']);
+        $border_color = sanitize_hex_color($atts['border_color']);
+        
+        // Get logo
+        $logo_id = get_option('ert_qr_logo', 0);
+        $logo_url = $logo_id ? wp_get_attachment_url($logo_id) : '';
+        
+        // Generate unique ID for this QR code
+        $qr_id = 'ert-qr-' . md5($base_url . $size . $label);
+        
+        // Calculate total container size
+        $container_size = $size + ($padding * 2);
+        
+        ob_start();
+        ?>
+        <div class="easyreferraltracker-qr-wrapper" id="<?php echo esc_attr($qr_id); ?>" style="text-align: center; margin: 20px auto;">
+            <div class="easyreferraltracker-qr-container" style="display: inline-block; position: relative; padding: <?php echo esc_attr($padding); ?>px; background: <?php echo esc_attr($container_color); ?>; border: 2px solid <?php echo esc_attr($border_color); ?>; border-radius: <?php echo esc_attr($border_radius); ?>px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <img class="easyreferraltracker-qr-code" src="" alt="<?php echo esc_attr($label); ?>" style="display: block; width: <?php echo esc_attr($size); ?>px; height: <?php echo esc_attr($size); ?>px;">
+                <?php if ($logo_url): ?>
+                <img class="easyreferraltracker-qr-logo" src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="position: absolute; width: <?php echo esc_attr($size * 0.2); ?>px; height: <?php echo esc_attr($size * 0.2); ?>px; top: <?php echo esc_attr($padding + ($size - $size * 0.2) / 2); ?>px; left: <?php echo esc_attr($padding + ($size - $size * 0.2) / 2); ?>px; border-radius: 4px; object-fit: cover; object-position: center;">
+                <?php endif; ?>
+            </div>
+            <?php if ($label): ?>
+            <p class="easyreferraltracker-qr-label" style="margin-top: 15px; font-size: 16px; color: #333; font-weight: 500;"><?php echo esc_html($label); ?></p>
+            <?php endif; ?>
+        </div>
+        
+        <script>
+        (function() {
+            function getCookie(name) {
+                const value = '; ' + document.cookie;
+                const parts = value.split('; ' + name + '=');
+                if (parts.length === 2) {
+                    return parts.pop().split(';').shift();
+                }
+                return 'homepage';
+            }
+            
+            function initQR() {
+                const container = document.getElementById('<?php echo esc_js($qr_id); ?>');
+                if (!container) return;
+                
+                const referralCode = getCookie('ert_referral') || 'homepage';
+                const baseUrl = <?php echo wp_json_encode($base_url); ?>;
+                const size = <?php echo absint($size); ?>;
+                
+                // Build final URL with referral
+                const finalUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'r=' + encodeURIComponent(referralCode);
+                
+                // Generate QR code URL using QR Server API (more reliable)
+                const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl);
+                
+                // Update QR code image
+                const qrImg = container.querySelector('.easyreferraltracker-qr-code');
+                if (qrImg) {
+                    qrImg.src = qrUrl;
+                }
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initQR);
+            } else {
+                initQR();
+            }
+        })();
+        </script>
+        <?php
+        
+        return ob_get_clean();
+    }
+    
+    /**
+     * Admin Dashboard Page
+     */
+    public function admin_dashboard_page() {
+        // Security: Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
+        }
+        
+        global $wpdb;
+        
+        $table_visits = $wpdb->prefix . 'ert_referral_visits';
+        $table_clicks = $wpdb->prefix . 'ert_link_clicks';
+        
+        // Get statistics
+        $total_visits = $wpdb->get_var("SELECT COUNT(*) FROM $table_visits");
+        $unique_referrals = $wpdb->get_var("SELECT COUNT(DISTINCT referral_code) FROM $table_visits");
+        $total_clicks = $wpdb->get_var("SELECT COUNT(*) FROM $table_clicks");
+        $today_visits = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_visits WHERE DATE(created_at) = %s",
+            current_time('Y-m-d')
+        ));
+        
+        // Top referrals
+        $top_referrals = $wpdb->get_results(
+            "SELECT v.referral_code, 
+                    COUNT(DISTINCT v.id) as visits,
+                    COUNT(DISTINCT c.id) as clicks,
+                    MAX(v.created_at) as last_used
+             FROM $table_visits v
+             LEFT JOIN $table_clicks c ON v.referral_code = c.referral_code
+             GROUP BY v.referral_code
+             ORDER BY visits DESC
+             LIMIT 20",
+            ARRAY_A
+        );
+        
+        // Recent activity
+        $recent_activity = $wpdb->get_results(
+            "SELECT * FROM $table_visits ORDER BY created_at DESC LIMIT 50",
+            ARRAY_A
+        );
+        
+        include EASYREFERRALTRACKER_PLUGIN_DIR . 'templates/dashboard.php';
+    }
+    
+    /**
+     * Admin QR Generator Page
+     */
+    public function admin_qr_generator_page() {
+        // Security: Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
+        }
+        
+        include EASYREFERRALTRACKER_PLUGIN_DIR . 'templates/qr-generator.php';
+    }
+    
+    /**
+     * Admin Settings Page
+     */
+    public function admin_settings_page() {
+        // Security: Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easyreferraltracker'));
+        }
+        
+        include EASYREFERRALTRACKER_PLUGIN_DIR . 'templates/settings.php';
+    }
+}
+
+// Initialize the plugin
+EasyReferralTracker::get_instance();
