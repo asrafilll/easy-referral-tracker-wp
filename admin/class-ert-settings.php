@@ -91,6 +91,12 @@ class ERT_Settings {
 			'sanitize_callback' => 'sanitize_text_field',
 			'default' => '',
 		));
+
+		register_setting('ert_appstore_settings', 'ert_default_referral', array(
+			'type' => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default' => 'direct',
+		));
 	}
 
 	/**

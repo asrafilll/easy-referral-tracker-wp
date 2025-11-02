@@ -227,7 +227,7 @@ EasyReferralTracker respects your users' privacy:
 * Third-party cookies
 
 **Cookie Usage:**
-* `rf_referral` - Stores the referral code (30 days default)
+* `ert_referral` - Stores the referral code (30 days default)
 * `rf_tracked_*` - Prevents duplicate visit counting
 * `rf_rate_limit_user` - Rate limiting (1 hour)
 

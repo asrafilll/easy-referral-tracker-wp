@@ -143,11 +143,11 @@ class ERT_Shortcodes {
 					}
 					
 					// Get referral code from cookie or URL parameter
-					var referralCode = getCookie('rf_referral');
+					var referralCode = getCookie('ert_referral');
 					if (!referralCode) {
 						// Fallback: check URL parameters
 						var urlParams = new URLSearchParams(window.location.search);
-						referralCode = urlParams.get('r') || 'homepage';
+						referralCode = urlParams.get('r') || '" . esc_js(get_option('ert_default_referral', 'direct')) . "';
 					}
 					
 					// Build final URL with referral code

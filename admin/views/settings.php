@@ -170,6 +170,26 @@ if (!defined('ABSPATH')) {
 								</p>
 							</td>
 						</tr>
+
+						<!-- Default Referral Code -->
+						<tr>
+							<th scope="row">
+								<label for="ert_default_referral">
+									<?php esc_html_e('Default Referral Code', 'easyreferraltracker'); ?>
+								</label>
+							</th>
+							<td>
+								<input type="text"
+									   id="ert_default_referral"
+									   name="ert_default_referral"
+									   value="<?php echo esc_attr(get_option('ert_default_referral', 'direct')); ?>"
+									   class="regular-text"
+									   placeholder="direct">
+								<p class="description">
+									<?php esc_html_e('Default referral code for visitors without a specific referral. Common values: direct, organic, none. Default: direct', 'easyreferraltracker'); ?>
+								</p>
+							</td>
+						</tr>
 					</table>
 
 					<?php submit_button(); ?>
@@ -198,24 +218,6 @@ if (!defined('ABSPATH')) {
 				</ul>
 			</div>
 
-			<!-- Quick Links -->
-			<div class="ert-info-box">
-				<h3>📚 <?php esc_html_e('Quick Links', 'easyreferraltracker'); ?></h3>
-				<ul>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=easyreferraltracker')); ?>">
-						<?php esc_html_e('View Dashboard', 'easyreferraltracker'); ?>
-					</a></li>
-					<li><a href="<?php echo esc_url(admin_url('admin.php?page=easyreferraltracker-qr-generator')); ?>">
-						<?php esc_html_e('Generate QR Codes', 'easyreferraltracker'); ?>
-					</a></li>
-					<li><a href="https://github.com/asrafilll/easyreferraltracker" target="_blank" rel="noopener noreferrer">
-						<?php esc_html_e('Documentation', 'easyreferraltracker'); ?> ↗
-					</a></li>
-					<li><a href="https://github.com/asrafilll/easyreferraltracker/issues" target="_blank" rel="noopener noreferrer">
-						<?php esc_html_e('Report Issues', 'easyreferraltracker'); ?> ↗
-					</a></li>
-				</ul>
-			</div>
 
 			<!-- Testing Instructions -->
 			<div class="ert-info-box">
@@ -230,16 +232,6 @@ if (!defined('ABSPATH')) {
 				</ol>
 			</div>
 
-			<!-- Rate Limiting Info -->
-			<div class="ert-info-box">
-				<h3>🛡️ <?php esc_html_e('Rate Limiting', 'easyreferraltracker'); ?></h3>
-				<p><?php esc_html_e('Two-layer protection:', 'easyreferraltracker'); ?></p>
-				<p><strong><?php esc_html_e('Per-User Limit:', 'easyreferraltracker'); ?></strong><br>
-				<?php esc_html_e('Prevents individual abuse. Uses cookies to track per-user requests.', 'easyreferraltracker'); ?></p>
-				<p><strong><?php esc_html_e('Global Limit:', 'easyreferraltracker'); ?></strong><br>
-				<?php esc_html_e('Protects against DDoS attacks. Limits total site-wide requests.', 'easyreferraltracker'); ?></p>
-				<p class="description"><?php esc_html_e('No IP tracking required for rate limiting!', 'easyreferraltracker'); ?></p>
-			</div>
 		</div>
 	</div>
 

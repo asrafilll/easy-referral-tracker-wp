@@ -59,9 +59,9 @@ class ERT_Tracker {
 			// No referral code in URL - check if user already has a cookie
 			$existing_cookie = isset($_COOKIE['ert_referral']) ? sanitize_text_field($_COOKIE['ert_referral']) : '';
 
-			// If no existing cookie, set default to "homepage"
+			// If no existing cookie, set default from settings
 			if (empty($existing_cookie)) {
-				$referral_code = 'homepage';
+				$referral_code = get_option('ert_default_referral', 'direct');
 			} else {
 				// User already has a referral code, don't override
 				return;

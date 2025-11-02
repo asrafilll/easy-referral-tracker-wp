@@ -88,7 +88,6 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 									   value="<?php echo esc_attr($qr_size); ?>"
 									   min="100"
 									   max="500"
-									   step="50"
 									   style="width: 100px;">
 								<span>pixels</span>
 								<p class="description">
@@ -137,7 +136,6 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 									   value="<?php echo esc_attr($qr_padding); ?>"
 									   min="0"
 									   max="100"
-									   step="5"
 									   style="width: 100px;">
 								<span>pixels</span>
 								<p class="description">
@@ -160,7 +158,6 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 									   value="<?php echo esc_attr($qr_border_radius); ?>"
 									   min="0"
 									   max="50"
-									   step="5"
 									   style="width: 100px;">
 								<span>pixels</span>
 								<p class="description">
