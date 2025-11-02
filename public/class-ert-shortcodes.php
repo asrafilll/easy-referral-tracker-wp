@@ -44,7 +44,6 @@ class ERT_Shortcodes {
 			array(
 				'size' => get_option('ert_qr_size', 300),
 				'url' => get_option('ert_qr_base_url', home_url('/download')),
-				'label' => get_option('ert_qr_label', 'Scan to Download'),
 				'padding' => get_option('ert_qr_padding', 20),
 				'border_radius' => get_option('ert_qr_border_radius', 10),
 				'container_color' => get_option('ert_qr_container_color', '#FFFFFF'),
@@ -57,7 +56,6 @@ class ERT_Shortcodes {
 		// Sanitize and validate
 		$size = $this->sanitize_size($atts['size']);
 		$base_url = esc_url($atts['url']);
-		$label = sanitize_text_field($atts['label']);
 		$padding = $this->sanitize_padding($atts['padding']);
 		$border_radius = $this->sanitize_border_radius($atts['border_radius']);
 		$container_color = sanitize_hex_color($atts['container_color']);
@@ -70,7 +68,7 @@ class ERT_Shortcodes {
 		$this->enqueue_global_qr_manager();
 
 		// Generate HTML with data attributes
-		return $this->generate_html_with_data_attrs($qr_id, $size, $base_url, $label, $padding, $border_radius, $container_color, $border_color);
+		return $this->generate_html_with_data_attrs($qr_id, $size, $base_url, $padding, $border_radius, $container_color, $border_color);
 	}
 
 	/**
@@ -281,14 +279,13 @@ class ERT_Shortcodes {
 	 * @param string $qr_id           QR code element ID
 	 * @param int    $size            QR code size
 	 * @param string $base_url        Base URL for QR code
-	 * @param string $label           Label text
 	 * @param int    $padding         Padding value
 	 * @param int    $border_radius   Border radius value
 	 * @param string $container_color Container color
 	 * @param string $border_color    Border color
 	 * @return string HTML output
 	 */
-	private function generate_html_with_data_attrs(string $qr_id, int $size, string $base_url, string $label, int $padding, int $border_radius, string $container_color, string $border_color): string {
+	private function generate_html_with_data_attrs(string $qr_id, int $size, string $base_url, int $padding, int $border_radius, string $container_color, string $border_color): string {
 		ob_start();
 		?>
 		<div class="easyreferraltracker-qr-wrapper" 
@@ -298,11 +295,8 @@ class ERT_Shortcodes {
 			 data-ert-size="<?php echo esc_attr($size); ?>"
 			 style="text-align: center; margin: 20px auto; opacity: 0.3; transition: opacity 0.3s ease, transform 0.3s ease; transform: scale(0.95);">
 			<div class="easyreferraltracker-qr-container" style="display: inline-block; position: relative; padding: <?php echo esc_attr($padding); ?>px; background: <?php echo esc_attr($container_color); ?>; border: 2px solid <?php echo esc_attr($border_color); ?>; border-radius: <?php echo esc_attr($border_radius); ?>px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-				<img class="easyreferraltracker-qr-code" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+" alt="<?php echo esc_attr($label); ?>" style="display: block; width: <?php echo esc_attr($size); ?>px; height: <?php echo esc_attr($size); ?>px; max-width: 100%; height: auto;">
+				<img class="easyreferraltracker-qr-code" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+" alt="QR Code" style="display: block; width: <?php echo esc_attr($size); ?>px; height: <?php echo esc_attr($size); ?>px; max-width: 100%; height: auto;">
 			</div>
-			<?php if (!empty($label)): ?>
-				<p style="margin-top: 15px; font-size: 16px; color: #333; font-weight: 500;"><?php echo esc_html($label); ?></p>
-			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
