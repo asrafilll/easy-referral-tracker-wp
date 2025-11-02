@@ -220,9 +220,19 @@ class ERT_Shortcodes {
 					qrImg.alt = 'QR Code for ' + referralCode;
 				}
 				
-				// Process all QR codes sequentially
+				// Process all QR codes sequentially (browser compatible)
 				function processAllQRCodes() {
-					var qrContainers = document.querySelectorAll('[data-ert-qr]');
+					// Browser-compatible way to find elements with data-ert-qr
+					var allDivs = document.getElementsByTagName('div');
+					var qrContainers = [];
+					
+					// Manual filtering for better browser compatibility
+					for (var i = 0; i < allDivs.length; i++) {
+						if (allDivs[i].getAttribute('data-ert-qr') === 'true') {
+							qrContainers.push(allDivs[i]);
+						}
+					}
+					
 					var currentIndex = 0;
 					
 					function processNext() {
@@ -246,8 +256,17 @@ class ERT_Shortcodes {
 					var maxAttempts = 50;
 					
 					function tryInit() {
-						var qrContainers = document.querySelectorAll('[data-ert-qr]');
-						if (qrContainers.length > 0) {
+						// Browser-compatible element detection
+						var allDivs = document.getElementsByTagName('div');
+						var qrCount = 0;
+						
+						for (var i = 0; i < allDivs.length; i++) {
+							if (allDivs[i].getAttribute('data-ert-qr') === 'true') {
+								qrCount++;
+							}
+						}
+						
+						if (qrCount > 0) {
 							processAllQRCodes();
 						} else {
 							initAttempts++;
