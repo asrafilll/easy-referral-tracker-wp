@@ -21,6 +21,11 @@ if (!defined('ABSPATH')) {
 class ERT_Shortcodes {
 
 	/**
+	 * Static flag to ensure global script is only enqueued once
+	 */
+	private static bool $global_script_enqueued = false;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -59,13 +64,13 @@ class ERT_Shortcodes {
 		$border_color = sanitize_hex_color($atts['border_color']);
 
 		// Generate unique ID for this QR code
-		$qr_id = 'ert-qr-' . md5($base_url . $size . $label);
+		$qr_id = 'ert-qr-' . uniqid();
 
-		// Enqueue shortcode script
-		$this->enqueue_shortcode_script($qr_id, $base_url, $size);
+		// Enqueue global QR manager script (only once per page)
+		$this->enqueue_global_qr_manager();
 
-		// Generate HTML
-		return $this->generate_html($qr_id, $size, $label, $padding, $border_radius, $container_color, $border_color);
+		// Generate HTML with data attributes
+		return $this->generate_html_with_data_attrs($qr_id, $size, $base_url, $label, $padding, $border_radius, $container_color, $border_color);
 	}
 
 	/**
@@ -103,26 +108,28 @@ class ERT_Shortcodes {
 
 
 	/**
-	 * Enqueue shortcode script
+	 * Enqueue global QR manager script (once per page)
 	 *
-	 * @param string $qr_id    QR code element ID
-	 * @param string $base_url Base URL for QR
-	 * @param int    $size     QR code size
 	 * @return void
 	 */
-	private function enqueue_shortcode_script(string $qr_id, string $base_url, int $size): void {
-		// Cache-friendly approach: Add script that works with all caching plugins
-		add_action('wp_footer', function() use ($qr_id, $base_url, $size) {
+	private function enqueue_global_qr_manager(): void {
+		// Only enqueue once per page
+		if (self::$global_script_enqueued) {
+			return;
+		}
+		self::$global_script_enqueued = true;
+
+		add_action('wp_footer', function() {
 			echo '<script type="text/javascript">';
 			echo "
-			// Cache-friendly QR code generation - works with WP Rocket, LiteSpeed, etc.
-			(function(qrId, baseUrl, qrSize) {
+			// Global QR Code Manager - Browser Compatible Version
+			(function() {
 				'use strict';
 				
-				var initAttempts = 0;
-				var maxAttempts = 50; // Try for up to 5 seconds
-				var isInitialized = false; // Prevent multiple initializations
+				var defaultReferral = '" . esc_js(get_option('ert_default_referral', 'direct')) . "';
+				var processedQRs = {}; // Track processed QR codes
 				
+				// Browser-compatible cookie function
 				function getCookie(name) {
 					var value = '; ' + document.cookie;
 					var parts = value.split('; ' + name + '=');
@@ -130,124 +137,172 @@ class ERT_Shortcodes {
 					return null;
 				}
 				
-				function generateQRCode() {
-					// Prevent multiple initializations of the same QR code
-					if (isInitialized) {
-						return;
-					}
-					
-					var container = document.getElementById(qrId);
-					if (!container) {
-						initAttempts++;
-						if (initAttempts < maxAttempts) {
-							setTimeout(generateQRCode, 100);
-						}
-						return;
-					}
-					
-					// Mark as initialized to prevent race conditions
-					isInitialized = true;
-					
-					// Get referral code from cookie or URL parameter
+				// Get referral code once for all QR codes
+				function getReferralCode() {
 					var referralCode = getCookie('ert_referral');
 					if (!referralCode) {
-						// Fallback: check URL parameters (browser compatible)
+						// Browser-compatible URL parameter parsing
 						var search = window.location.search;
 						var match = search.match(/[?&]r=([^&]*)/);
-						referralCode = match ? decodeURIComponent(match[1]) : '" . esc_js(get_option('ert_default_referral', 'direct')) . "';
+						referralCode = match ? decodeURIComponent(match[1]) : defaultReferral;
+					}
+					return referralCode;
+				}
+				
+				// Normalize URL to ensure trailing slash
+				function normalizeUrl(url) {
+					if (!url.endsWith('/') && url.indexOf('?') === -1) {
+						url += '/';
+					}
+					return url;
+				}
+				
+				// Process a single QR code
+				function processQRCode(container, index, callback) {
+					var qrId = container.id;
+					
+					// Skip if already processed
+					if (processedQRs[qrId]) {
+						if (callback) callback();
+						return;
+					}
+					processedQRs[qrId] = true;
+					
+					var baseUrl = container.getAttribute('data-ert-base-url');
+					var size = parseInt(container.getAttribute('data-ert-size'));
+					var qrImg = container.querySelector('.easyreferraltracker-qr-code');
+					
+					if (!qrImg || !baseUrl || !size) {
+						if (callback) callback();
+						return;
 					}
 					
-					// Normalize base URL - ensure trailing slash
-					var normalizedUrl = baseUrl;
-					if (!normalizedUrl.endsWith('/') && normalizedUrl.indexOf('?') === -1) {
-						normalizedUrl += '/';
-					}
-					
-					// Build final URL with referral code
+					var referralCode = getReferralCode();
+					var normalizedUrl = normalizeUrl(baseUrl);
 					var separator = normalizedUrl.indexOf('?') !== -1 ? '&' : '?';
 					var finalUrl = normalizedUrl + separator + 'r=' + encodeURIComponent(referralCode);
+					var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl);
 					
-					// Generate QR code URL using reliable QR service
-					var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize + '&data=' + encodeURIComponent(finalUrl) + '&ecc=M&margin=2';
+					var fallbackUsed = false;
+					var imageLoaded = false;
 					
-					// Update QR code image
-					var qrImg = container.querySelector('.easyreferraltracker-qr-code');
-					if (qrImg) {
-						var fallbackUsed = false;
-						
-						// Add error handling for QR image loading
-						qrImg.onerror = function() {
-							if (!fallbackUsed) {
-								fallbackUsed = true;
-								// Fallback to Google Charts QR service
-								this.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
-							}
-						};
-						
-						qrImg.onload = function() {
-							// Smooth fade-in effect
-							var wrapper = container;
-							wrapper.style.opacity = '1';
-							wrapper.style.transform = 'scale(1)';
-						};
-						
-						// Add timeout as fallback if neither onload nor onerror fires
-						setTimeout(function() {
-							if (qrImg.naturalWidth === 0 && !fallbackUsed) {
-								fallbackUsed = true;
-								qrImg.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
-							}
-						}, 5000);
-						
-						qrImg.src = qrUrl;
-						qrImg.alt = 'QR Code for ' + referralCode;
+					// Add error handling
+					qrImg.onerror = function() {
+						if (!fallbackUsed && !imageLoaded) {
+							fallbackUsed = true;
+							this.src = 'https://chart.googleapis.com/chart?chs=' + size + 'x' + size + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
+						}
+					};
+					
+					// Add load handler
+					qrImg.onload = function() {
+						if (!imageLoaded) {
+							imageLoaded = true;
+							container.style.opacity = '1';
+							container.style.transform = 'scale(1)';
+							// Process next QR code after this one loads
+							if (callback) setTimeout(callback, 100);
+						}
+					};
+					
+					// Timeout fallback
+					setTimeout(function() {
+						if (!imageLoaded && !fallbackUsed) {
+							fallbackUsed = true;
+							qrImg.src = 'https://chart.googleapis.com/chart?chs=' + size + 'x' + size + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
+						}
+						// Ensure callback runs even if image fails
+						if (!imageLoaded && callback) {
+							setTimeout(callback, 100);
+						}
+					}, 3000);
+					
+					// Set the image source to start loading
+					qrImg.src = qrUrl;
+					qrImg.alt = 'QR Code for ' + referralCode;
+				}
+				
+				// Process all QR codes sequentially
+				function processAllQRCodes() {
+					var qrContainers = document.querySelectorAll('[data-ert-qr]');
+					var currentIndex = 0;
+					
+					function processNext() {
+						if (currentIndex < qrContainers.length) {
+							processQRCode(qrContainers[currentIndex], currentIndex, function() {
+								currentIndex++;
+								processNext();
+							});
+						}
+					}
+					
+					// Start processing if we have QR codes
+					if (qrContainers.length > 0) {
+						processNext();
 					}
 				}
 				
-				// Multiple initialization strategies for cache compatibility
-				function initQR() {
+				// Initialize when DOM is ready
+				function initQRManager() {
+					var initAttempts = 0;
+					var maxAttempts = 50;
+					
+					function tryInit() {
+						var qrContainers = document.querySelectorAll('[data-ert-qr]');
+						if (qrContainers.length > 0) {
+							processAllQRCodes();
+						} else {
+							initAttempts++;
+							if (initAttempts < maxAttempts) {
+								setTimeout(tryInit, 100);
+							}
+						}
+					}
+					
 					if (document.readyState === 'loading') {
-						document.addEventListener('DOMContentLoaded', generateQRCode);
+						document.addEventListener('DOMContentLoaded', tryInit);
 					} else {
-						generateQRCode();
+						tryInit();
 					}
 				}
 				
-				// Immediate execution
-				initQR();
+				// Execute initialization
+				initQRManager();
 				
-				// Backup initialization for aggressive caching
-				if (window.addEventListener) {
-					window.addEventListener('load', generateQRCode, false);
-				} else if (window.attachEvent) {
-					window.attachEvent('onload', generateQRCode);
-				}
-				
-			})('" . esc_js($qr_id) . "', " . wp_json_encode($base_url) . ", " . absint($size) . ");
+			})();
 			";
 			echo '</script>';
 		}, 99);
 	}
 
 	/**
-	 * Generate HTML for QR code
+	 * Generate HTML for QR code with data attributes
 	 *
 	 * @param string $qr_id           QR code element ID
 	 * @param int    $size            QR code size
+	 * @param string $base_url        Base URL for QR code
 	 * @param string $label           Label text
 	 * @param int    $padding         Padding value
 	 * @param int    $border_radius   Border radius value
-	 * @param string $container_color Container background color
+	 * @param string $container_color Container color
 	 * @param string $border_color    Border color
 	 * @return string HTML output
 	 */
-	private function generate_html(string $qr_id, int $size, string $label, int $padding, int $border_radius, string $container_color, string $border_color): string {
+	private function generate_html_with_data_attrs(string $qr_id, int $size, string $base_url, string $label, int $padding, int $border_radius, string $container_color, string $border_color): string {
 		ob_start();
 		?>
-		<div class="easyreferraltracker-qr-wrapper" id="<?php echo esc_attr($qr_id); ?>" style="text-align: center; margin: 20px auto; opacity: 0.3; transition: opacity 0.3s ease, transform 0.3s ease; transform: scale(0.95);">
+		<div class="easyreferraltracker-qr-wrapper" 
+			 id="<?php echo esc_attr($qr_id); ?>" 
+			 data-ert-qr="true"
+			 data-ert-base-url="<?php echo esc_attr($base_url); ?>"
+			 data-ert-size="<?php echo esc_attr($size); ?>"
+			 style="text-align: center; margin: 20px auto; opacity: 0.3; transition: opacity 0.3s ease, transform 0.3s ease; transform: scale(0.95);">
 			<div class="easyreferraltracker-qr-container" style="display: inline-block; position: relative; padding: <?php echo esc_attr($padding); ?>px; background: <?php echo esc_attr($container_color); ?>; border: 2px solid <?php echo esc_attr($border_color); ?>; border-radius: <?php echo esc_attr($border_radius); ?>px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 				<img class="easyreferraltracker-qr-code" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+" alt="<?php echo esc_attr($label); ?>" style="display: block; width: <?php echo esc_attr($size); ?>px; height: <?php echo esc_attr($size); ?>px; max-width: 100%; height: auto;">
 			</div>
+			<?php if (!empty($label)): ?>
+				<p style="margin-top: 15px; font-size: 16px; color: #333; font-weight: 500;"><?php echo esc_html($label); ?></p>
+			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
