@@ -17,7 +17,6 @@ if (isset($_POST['ert_qr_save']) && check_admin_referer('ert_qr_settings')) {
 	update_option('ert_qr_base_url', esc_url_raw($_POST['ert_qr_base_url']));
 	update_option('ert_qr_size', absint($_POST['ert_qr_size']));
 	update_option('ert_qr_label', sanitize_text_field($_POST['ert_qr_label']));
-	update_option('ert_qr_logo', absint($_POST['ert_qr_logo']));
 	update_option('ert_qr_padding', absint($_POST['ert_qr_padding']));
 	update_option('ert_qr_border_radius', absint($_POST['ert_qr_border_radius']));
 	update_option('ert_qr_container_color', sanitize_hex_color($_POST['ert_qr_container_color']));
@@ -30,8 +29,6 @@ if (isset($_POST['ert_qr_save']) && check_admin_referer('ert_qr_settings')) {
 $base_url = get_option('ert_qr_base_url', home_url('/download'));
 $qr_size = get_option('ert_qr_size', 300);
 $qr_label = get_option('ert_qr_label', 'Scan to Download');
-$qr_logo = get_option('ert_qr_logo', 0);
-$logo_url = $qr_logo ? wp_get_attachment_url($qr_logo) : '';
 $qr_padding = get_option('ert_qr_padding', 20);
 $qr_border_radius = get_option('ert_qr_border_radius', 10);
 $qr_container_color = get_option('ert_qr_container_color', '#FFFFFF');
@@ -120,39 +117,6 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 							</td>
 						</tr>
 
-						<!-- Logo Upload -->
-						<tr>
-							<th scope="row">
-								<label for="ert_qr_logo">
-									<?php esc_html_e('Center Logo', 'easyreferraltracker'); ?>
-								</label>
-							</th>
-							<td>
-								<div class="ert-logo-upload">
-									<input type="hidden" id="ert_qr_logo" name="ert_qr_logo" value="<?php echo esc_attr($qr_logo); ?>">
-
-									<div id="ert-logo-preview" style="margin-bottom: 10px;">
-										<?php if ($logo_url) : ?>
-											<img src="<?php echo esc_url($logo_url); ?>" style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 5px; background: white;">
-										<?php endif; ?>
-									</div>
-
-									<button type="button" class="button" id="ert-upload-logo-btn">
-										<?php echo $logo_url ? esc_html__('Change Logo', 'easyreferraltracker') : esc_html__('Upload Logo', 'easyreferraltracker'); ?>
-									</button>
-
-									<?php if ($logo_url) : ?>
-										<button type="button" class="button" id="ert-remove-logo-btn">
-											<?php esc_html_e('Remove Logo', 'easyreferraltracker'); ?>
-										</button>
-									<?php endif; ?>
-
-									<p class="description">
-										<?php esc_html_e('Optional: Upload your logo to display in the center of the QR code. Recommended: Square image, transparent background.', 'easyreferraltracker'); ?>
-									</p>
-								</div>
-							</td>
-						</tr>
 					</table>
 
 					<h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;"><?php esc_html_e('Container Styling', 'easyreferraltracker'); ?></h3>
@@ -213,12 +177,18 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 								</label>
 							</th>
 							<td>
-								<input type="text"
+								<input type="color"
 									   id="ert_qr_container_color"
 									   name="ert_qr_container_color"
 									   value="<?php echo esc_attr($qr_container_color); ?>"
-									   class="ert-color-picker"
-									   data-default-color="#FFFFFF">
+									   style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+								<input type="text"
+									   id="ert_qr_container_color_text"
+									   value="<?php echo esc_attr($qr_container_color); ?>"
+									   placeholder="#FFFFFF"
+									   pattern="^#[0-9A-Fa-f]{6}$"
+									   style="width: 100px; margin-left: 10px;"
+									   class="ert-color-text-input">
 								<p class="description">
 									<?php esc_html_e('Background color of the container. Default: White (#FFFFFF)', 'easyreferraltracker'); ?>
 								</p>
@@ -233,12 +203,18 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 								</label>
 							</th>
 							<td>
-								<input type="text"
+								<input type="color"
 									   id="ert_qr_border_color"
 									   name="ert_qr_border_color"
 									   value="<?php echo esc_attr($qr_border_color); ?>"
-									   class="ert-color-picker"
-									   data-default-color="#E5E7EB">
+									   style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+								<input type="text"
+									   id="ert_qr_border_color_text"
+									   value="<?php echo esc_attr($qr_border_color); ?>"
+									   placeholder="#E5E7EB"
+									   pattern="^#[0-9A-Fa-f]{6}$"
+									   style="width: 100px; margin-left: 10px;"
+									   class="ert-color-text-input">
 								<p class="description">
 									<?php esc_html_e('Border color of the container. Default: Light gray (#E5E7EB)', 'easyreferraltracker'); ?>
 								</p>
@@ -277,7 +253,6 @@ $qr_border_color = get_option('ert_qr_border_color', '#E5E7EB');
 				<div id="ert-preview-container" style="text-align: center; padding: 30px; background: #f9f9f9; border-radius: 8px; min-height: 400px;">
 					<div class="easyreferraltracker-qr-container" style="display: inline-block; position: relative;">
 						<img id="ert-preview-qr" src="" alt="QR Code Preview">
-						<img id="ert-preview-logo" src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="display: <?php echo $logo_url ? 'block' : 'none'; ?>; position: absolute;">
 					</div>
 					<p id="ert-preview-label"></p>
 					<p style="margin-top: 10px; font-size: 13px; color: #666;">

@@ -9,21 +9,43 @@
 
 jQuery(document).ready(function($) {
 
-	// Initialize WordPress color picker
-	if ($.fn.wpColorPicker) {
-		$('.ert-color-picker').wpColorPicker({
-			change: function(event, ui) {
-				setTimeout(function() {
-					updatePreview();
-				}, 100);
-			},
-			clear: function() {
-				setTimeout(function() {
-					updatePreview();
-				}, 100);
+	/**
+	 * Color picker synchronization
+	 */
+	function setupColorPickers() {
+		// Sync color input with text input for container color
+		$('#ert_qr_container_color').on('input change', function() {
+			const color = $(this).val();
+			$('#ert_qr_container_color_text').val(color);
+			updatePreview();
+		});
+
+		$('#ert_qr_container_color_text').on('input change', function() {
+			const color = $(this).val();
+			if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+				$('#ert_qr_container_color').val(color);
+				updatePreview();
+			}
+		});
+
+		// Sync color input with text input for border color
+		$('#ert_qr_border_color').on('input change', function() {
+			const color = $(this).val();
+			$('#ert_qr_border_color_text').val(color);
+			updatePreview();
+		});
+
+		$('#ert_qr_border_color_text').on('input change', function() {
+			const color = $(this).val();
+			if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+				$('#ert_qr_border_color').val(color);
+				updatePreview();
 			}
 		});
 	}
+
+	// Initialize color pickers
+	setupColorPickers();
 
 	/**
 	 * Update live preview with current settings
@@ -65,27 +87,9 @@ jQuery(document).ready(function($) {
 		$('#ert-preview-label').text(label);
 		$('#ert-preview-url').text(finalUrl);
 
-		// Update logo position and styling if exists
-		const logoImg = $('#ert-preview-logo');
-		if (logoImg.attr('src') && logoImg.attr('src').length > 0) {
-			const logoSize = Math.round(size * 0.2);
-			const logoTop = padding + Math.round((size - logoSize) / 2);
-			const logoLeft = padding + Math.round((size - logoSize) / 2);
-			logoImg.css({
-				'width': logoSize + 'px',
-				'height': logoSize + 'px',
-				'top': logoTop + 'px',
-				'left': logoLeft + 'px',
-				'display': 'block',
-				'object-fit': 'cover',
-				'object-position': 'center'
-			});
-		} else {
-			logoImg.css('display', 'none');
-		}
 	}
 
-	// Update preview on input change
+	// Update preview on input change (color inputs handled in setupColorPickers)
 	$('#ert_qr_base_url, #ert_qr_size, #ert_qr_label, #ert_qr_padding, #ert_qr_border_radius').on('input change', updatePreview);
 
 	// Initial preview - delay to ensure everything is loaded
@@ -158,62 +162,4 @@ jQuery(document).ready(function($) {
 		}
 	});
 
-	/**
-	 * Logo Upload
-	 */
-	let logoUploader;
-
-	$('#ert-upload-logo-btn').on('click', function(e) {
-		e.preventDefault();
-
-		// Check if wp.media is available
-		if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
-			alert('Media uploader not available. Please refresh the page.');
-			return;
-		}
-
-		if (logoUploader) {
-			logoUploader.open();
-			return;
-		}
-
-		logoUploader = wp.media({
-			title: 'Choose Logo',
-			button: {
-				text: 'Use this logo'
-			},
-			multiple: false,
-			library: {
-				type: 'image'
-			}
-		});
-
-		logoUploader.on('select', function() {
-			const attachment = logoUploader.state().get('selection').first().toJSON();
-			$('#ert_qr_logo').val(attachment.id);
-			$('#ert-logo-preview').html('<img src="' + attachment.url + '" style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 5px; background: white; border-radius: 4px;">');
-			$('#ert-preview-logo').attr('src', attachment.url);
-
-			// Show/update remove button
-			if ($('#ert-remove-logo-btn').length === 0) {
-				$('#ert-upload-logo-btn').after('<button type="button" class="button" id="ert-remove-logo-btn" style="margin-left: 5px;">Remove Logo</button>');
-			}
-
-			updatePreview();
-		});
-
-		logoUploader.open();
-	});
-
-	/**
-	 * Remove Logo (delegated event handler)
-	 */
-	$(document).on('click', '#ert-remove-logo-btn', function(e) {
-		e.preventDefault();
-		$('#ert_qr_logo').val('');
-		$('#ert-logo-preview').html('');
-		$('#ert-preview-logo').attr('src', '').hide();
-		$(this).remove();
-		updatePreview();
-	});
 });

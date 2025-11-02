@@ -55,8 +55,8 @@ class ERT_Admin {
 	public function add_admin_menu(): void {
 		// Main dashboard page
 		add_menu_page(
-			__('EasyReferralTracker', 'easyreferraltracker'),
-			__('EasyReferralTracker', 'easyreferraltracker'),
+			__('Referral Tracker', 'easyreferraltracker'),
+			__('Referral Tracker', 'easyreferraltracker'),
 			'manage_options',
 			'easyreferraltracker',
 			array($this->dashboard, 'render_page'),

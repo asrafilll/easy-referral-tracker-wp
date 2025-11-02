@@ -53,7 +53,6 @@ class ERT_QR_Generator {
 			'base_url' => get_option('ert_qr_base_url', home_url('/download')),
 			'size' => get_option('ert_qr_size', 300),
 			'label' => get_option('ert_qr_label', 'Scan to Download'),
-			'logo' => get_option('ert_qr_logo', 0),
 			'padding' => get_option('ert_qr_padding', 20),
 			'border_radius' => get_option('ert_qr_border_radius', 10),
 			'container_color' => get_option('ert_qr_container_color', '#FFFFFF'),

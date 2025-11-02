@@ -35,7 +35,7 @@ Unlike other tracking solutions, EasyReferralTracker collects **ZERO personal da
 **🎯 Dynamic QR Codes**
 * Personalized QR codes for each visitor
 * Automatic referral code inclusion
-* Custom branding with logo overlay
+* Customizable styling and colors
 * Live preview in admin
 * Download as PNG
 
@@ -142,7 +142,7 @@ No. EasyReferralTracker adds only ~0.01s overhead, which is imperceptible to use
 
 = Can I customize the QR codes? =
 
-Yes! You can customize size (100-500px), label text, base URL, and even add your logo in the center.
+Yes! You can customize size (100-500px), label text, base URL, colors, padding, and border radius.
 
 = Does this work with caching plugins? =
 
@@ -178,7 +178,7 @@ EasyReferralTracker still works! We don't use tracking pixels or external analyt
 
 = Can I use multiple shortcodes? =
 
-Yes! Use as many QR codes as you want. Each can have custom settings: `[easyreferraltracker_qr size="400" label="Download Now" logo_size="12"]`
+Yes! Use as many QR codes as you want. Each can have custom settings: `[easyreferraltracker_qr size="400" label="Download Now"]`
 
 == Screenshots ==
 
@@ -186,9 +186,8 @@ Yes! Use as many QR codes as you want. Each can have custom settings: `[easyrefe
 2. **Top Performing Referrals** - See which campaigns are driving the most traffic
 3. **Settings Page** - Simple configuration with GDPR compliance information
 4. **QR Code Generator** - Create dynamic QR codes with live preview
-5. **QR Code with Logo** - Branded QR codes with your logo in the center
-6. **Recent Activity** - Monitor referral traffic in real-time
-7. **Privacy-Focused** - Clear information about what data is (and isn't) collected
+5. **Recent Activity** - Monitor referral traffic in real-time
+6. **Privacy-Focused** - Clear information about what data is (and isn't) collected
 
 == Changelog ==
 
@@ -196,7 +195,7 @@ Yes! Use as many QR codes as you want. Each can have custom settings: `[easyrefe
 * 🎉 Initial release
 * ✨ Privacy-focused tracking (no IP, no user agent)
 * 📱 iOS and Android app store integration
-* 🎨 Dynamic QR code generator with logo support
+* 🎨 Dynamic QR code generator with customizable styling
 * 📊 Analytics dashboard with top performers
 * 🛡️ Cookie-based rate limiting (two-layer protection)
 * 🔒 100% GDPR compliant

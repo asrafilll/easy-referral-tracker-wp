@@ -117,12 +117,6 @@ class ERT_Settings {
 			'default' => 'Scan to Download',
 		));
 
-		register_setting('ert_qr_settings', 'ert_qr_logo', array(
-			'type' => 'integer',
-			'sanitize_callback' => 'absint',
-			'default' => 0,
-		));
-
 		register_setting('ert_qr_settings', 'ert_qr_padding', array(
 			'type' => 'integer',
 			'sanitize_callback' => 'absint',
@@ -145,12 +139,6 @@ class ERT_Settings {
 			'type' => 'string',
 			'sanitize_callback' => 'sanitize_hex_color',
 			'default' => '#E5E7EB',
-		));
-
-		register_setting('ert_qr_settings', 'ert_qr_logo_size', array(
-			'type' => 'integer',
-			'sanitize_callback' => 'absint',
-			'default' => 15,
 		));
 	}
 
