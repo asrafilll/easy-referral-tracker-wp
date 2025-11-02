@@ -124,6 +124,7 @@ class ERT_Shortcodes {
 				var qrSize = " . absint($size) . ";
 				var initAttempts = 0;
 				var maxAttempts = 50; // Try for up to 5 seconds
+				var isInitialized = false; // Prevent multiple initializations
 				
 				function getCookie(name) {
 					var value = '; ' + document.cookie;
@@ -133,6 +134,11 @@ class ERT_Shortcodes {
 				}
 				
 				function generateQRCode() {
+					// Prevent multiple initializations of the same QR code
+					if (isInitialized) {
+						return;
+					}
+					
 					var container = document.getElementById(qrId);
 					if (!container) {
 						initAttempts++;
@@ -141,6 +147,9 @@ class ERT_Shortcodes {
 						}
 						return;
 					}
+					
+					// Mark as initialized to prevent race conditions
+					isInitialized = true;
 					
 					// Get referral code from cookie or URL parameter
 					var referralCode = getCookie('ert_referral');
@@ -167,10 +176,15 @@ class ERT_Shortcodes {
 					// Update QR code image
 					var qrImg = container.querySelector('.easyreferraltracker-qr-code');
 					if (qrImg) {
+						var fallbackUsed = false;
+						
 						// Add error handling for QR image loading
 						qrImg.onerror = function() {
-							// Fallback to simpler QR service if first fails
-							this.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
+							if (!fallbackUsed) {
+								fallbackUsed = true;
+								// Fallback to Google Charts QR service
+								this.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
+							}
 						};
 						
 						qrImg.onload = function() {
@@ -179,6 +193,14 @@ class ERT_Shortcodes {
 							wrapper.style.opacity = '1';
 							wrapper.style.transform = 'scale(1)';
 						};
+						
+						// Add timeout as fallback if neither onload nor onerror fires
+						setTimeout(function() {
+							if (qrImg.naturalWidth === 0 && !fallbackUsed) {
+								fallbackUsed = true;
+								qrImg.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
+							}
+						}, 5000);
 						
 						qrImg.src = qrUrl;
 						qrImg.alt = 'QR Code for ' + referralCode;
