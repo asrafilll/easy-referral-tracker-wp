@@ -66,7 +66,7 @@ jQuery(document).ready(function($) {
 		const finalUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'r=' + referralCode;
 
 		// Generate QR code URL using QR Server API
-		const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl);
+		const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl) + '&ecc=M&margin=2';
 
 		// Update preview container styling
 		const $previewContainer = $('#ert-preview-container .easyreferraltracker-qr-container');

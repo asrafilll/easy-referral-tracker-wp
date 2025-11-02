@@ -73,7 +73,7 @@ class ERT_QR_Generator {
 		$final_url = $url . (strpos($url, '?') !== false ? '&' : '?') . 'r=' . urlencode($referral);
 
 		// Generate QR code URL using QR Server API
-		return 'https://api.qrserver.com/v1/create-qr-code/?size=' . absint($size) . 'x' . absint($size) . '&data=' . urlencode($final_url);
+		return 'https://api.qrserver.com/v1/create-qr-code/?size=' . absint($size) . 'x' . absint($size) . '&data=' . urlencode($final_url) . '&ecc=M&margin=2';
 	}
 
 	/**
