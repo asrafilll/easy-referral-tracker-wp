@@ -20,7 +20,6 @@ if (!defined('ABSPATH')) {
  */
 class ERT_Shortcodes {
 
-
 	/**
 	 * Constructor
 	 */
@@ -146,7 +145,7 @@ class ERT_Shortcodes {
 					// Get referral code from cookie or URL parameter
 					var referralCode = getCookie('ert_referral');
 					if (!referralCode) {
-						// Fallback: check URL parameters manually for browser compatibility
+						// Fallback: check URL parameters (browser compatible)
 						var search = window.location.search;
 						var match = search.match(/[?&]r=([^&]*)/);
 						referralCode = match ? decodeURIComponent(match[1]) : '" . esc_js(get_option('ert_default_referral', 'direct')) . "';
@@ -163,14 +162,14 @@ class ERT_Shortcodes {
 					var finalUrl = normalizedUrl + separator + 'r=' + encodeURIComponent(referralCode);
 					
 					// Generate QR code URL using reliable QR service
-					var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize + '&data=' + encodeURIComponent(finalUrl);
+					var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize + '&data=' + encodeURIComponent(finalUrl) + '&ecc=M&margin=2';
 					
 					// Update QR code image
 					var qrImg = container.querySelector('.easyreferraltracker-qr-code');
 					if (qrImg) {
 						// Add error handling for QR image loading
 						qrImg.onerror = function() {
-							// Fallback to Google Charts QR service if first fails
+							// Fallback to simpler QR service if first fails
 							this.src = 'https://chart.googleapis.com/chart?chs=' + qrSize + 'x' + qrSize + '&cht=qr&chl=' + encodeURIComponent(finalUrl) + '&chld=M|2';
 						};
 						
@@ -208,7 +207,7 @@ class ERT_Shortcodes {
 			})();
 			";
 			echo '</script>';
-		});
+		}, 99);
 	}
 
 	/**
@@ -219,7 +218,7 @@ class ERT_Shortcodes {
 	 * @param string $label           Label text
 	 * @param int    $padding         Padding value
 	 * @param int    $border_radius   Border radius value
-	 * @param string $container_color Container color
+	 * @param string $container_color Container background color
 	 * @param string $border_color    Border color
 	 * @return string HTML output
 	 */
@@ -230,9 +229,6 @@ class ERT_Shortcodes {
 			<div class="easyreferraltracker-qr-container" style="display: inline-block; position: relative; padding: <?php echo esc_attr($padding); ?>px; background: <?php echo esc_attr($container_color); ?>; border: 2px solid <?php echo esc_attr($border_color); ?>; border-radius: <?php echo esc_attr($border_radius); ?>px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 				<img class="easyreferraltracker-qr-code" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+" alt="<?php echo esc_attr($label); ?>" style="display: block; width: <?php echo esc_attr($size); ?>px; height: <?php echo esc_attr($size); ?>px; max-width: 100%; height: auto;">
 			</div>
-			<?php if (!empty($label)): ?>
-				<p style="margin-top: 15px; font-size: 16px; color: #333; font-weight: 500;"><?php echo esc_html($label); ?></p>
-			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
