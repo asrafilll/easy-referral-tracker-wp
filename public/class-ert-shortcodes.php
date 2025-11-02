@@ -116,12 +116,9 @@ class ERT_Shortcodes {
 			echo '<script type="text/javascript">';
 			echo "
 			// Cache-friendly QR code generation - works with WP Rocket, LiteSpeed, etc.
-			(function() {
+			(function(qrId, baseUrl, qrSize) {
 				'use strict';
 				
-				var qrId = '" . esc_js($qr_id) . "';
-				var baseUrl = " . wp_json_encode($base_url) . ";
-				var qrSize = " . absint($size) . ";
 				var initAttempts = 0;
 				var maxAttempts = 50; // Try for up to 5 seconds
 				var isInitialized = false; // Prevent multiple initializations
@@ -226,7 +223,7 @@ class ERT_Shortcodes {
 					window.attachEvent('onload', generateQRCode);
 				}
 				
-			})();
+			})('" . esc_js($qr_id) . "', " . wp_json_encode($base_url) . ", " . absint($size) . ");
 			";
 			echo '</script>';
 		}, 99);
