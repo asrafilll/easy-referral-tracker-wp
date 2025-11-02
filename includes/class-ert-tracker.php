@@ -46,6 +46,10 @@ class ERT_Tracker {
 	 * @return void
 	 */
 	public function track_referral(): void {
+		// Only track on actual pages, not system files, uploads, or admin
+		if (!$this->should_track_request()) {
+			return;
+		}
 		// Check if referral code exists in URL
 		if (isset($_GET['r']) && !empty($_GET['r'])) {
 			// Security: Sanitize and validate referral code
@@ -151,5 +155,54 @@ class ERT_Tracker {
 				'providerToken' => $provider_token,
 			)
 		);
+	}
+
+	/**
+	 * Check if current request should be tracked
+	 *
+	 * @return bool True if request should be tracked
+	 */
+	private function should_track_request(): bool {
+		// Don't track admin pages
+		if (is_admin()) {
+			return false;
+		}
+
+		// Don't track AJAX requests
+		if (defined('DOING_AJAX') && DOING_AJAX) {
+			return false;
+		}
+
+		// Don't track REST API requests
+		if (defined('REST_REQUEST') && REST_REQUEST) {
+			return false;
+		}
+
+		// Don't track WordPress system files and uploads
+		$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+		$excluded_patterns = array(
+			'/wp-content/uploads/',     // Media uploads
+			'/wp-includes/',           // WordPress core files
+			'/wp-admin/',             // Admin (backup check)
+			'/wp-json/',              // REST API
+			'/xmlrpc.php',            // XML-RPC
+			'/wp-cron.php',           // Cron
+			'/robots.txt',            // Robots
+			'/favicon.ico',           // Favicon
+			'/sitemap',               // Sitemaps
+			'/.well-known/',          // Well-known files
+			'/feed/',                 // RSS feeds
+			'?author=',               // Author archives
+			'wlwmanifest.xml',        // Windows Live Writer
+		);
+
+		foreach ($excluded_patterns as $pattern) {
+			if (strpos($request_uri, $pattern) !== false) {
+				return false;
+			}
+		}
+
+		// Only track front-end page requests
+		return true;
 	}
 }
