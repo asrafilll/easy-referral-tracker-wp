@@ -150,9 +150,15 @@ class ERT_Shortcodes {
 						referralCode = urlParams.get('r') || '" . esc_js(get_option('ert_default_referral', 'direct')) . "';
 					}
 					
+					// Normalize base URL - ensure trailing slash
+					var normalizedUrl = baseUrl;
+					if (!normalizedUrl.endsWith('/') && normalizedUrl.indexOf('?') === -1) {
+						normalizedUrl += '/';
+					}
+					
 					// Build final URL with referral code
-					var separator = baseUrl.indexOf('?') !== -1 ? '&' : '?';
-					var finalUrl = baseUrl + separator + 'r=' + encodeURIComponent(referralCode);
+					var separator = normalizedUrl.indexOf('?') !== -1 ? '&' : '?';
+					var finalUrl = normalizedUrl + separator + 'r=' + encodeURIComponent(referralCode);
 					
 					// Generate QR code URL using reliable QR service
 					var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize + '&data=' + encodeURIComponent(finalUrl) + '&ecc=M&margin=2';

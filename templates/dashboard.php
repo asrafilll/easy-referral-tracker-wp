@@ -121,7 +121,14 @@ if (!defined('ABSPATH')) {
                     <tr>
                         <td><?php echo esc_html(date_i18n('M d, Y H:i:s', strtotime($activity['created_at']))); ?></td>
                         <td><strong><?php echo esc_html($activity['referral_code']); ?></strong></td>
-                        <td><code><?php echo esc_html($activity['landing_page']); ?></code></td>
+                        <td><code><?php 
+                            $landing_page = $activity['landing_page'];
+                            // Convert relative URLs to absolute URLs
+                            if (strpos($landing_page, 'http') !== 0) {
+                                $landing_page = home_url($landing_page);
+                            }
+                            echo esc_html($landing_page); 
+                        ?></code></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

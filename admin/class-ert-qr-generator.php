@@ -69,8 +69,14 @@ class ERT_QR_Generator {
 	 * @return string QR code image URL
 	 */
 	public function generate_qr_url(string $url, string $referral = 'test', int $size = 300): string {
+		// Normalize URL - ensure trailing slash
+		$normalized_url = $url;
+		if (!str_ends_with($normalized_url, '/') && strpos($normalized_url, '?') === false) {
+			$normalized_url .= '/';
+		}
+		
 		// Build final URL with referral
-		$final_url = $url . (strpos($url, '?') !== false ? '&' : '?') . 'r=' . urlencode($referral);
+		$final_url = $normalized_url . (strpos($normalized_url, '?') !== false ? '&' : '?') . 'r=' . urlencode($referral);
 
 		// Generate QR code URL using QR Server API
 		return 'https://api.qrserver.com/v1/create-qr-code/?size=' . absint($size) . 'x' . absint($size) . '&data=' . urlencode($final_url) . '&ecc=M&margin=2';

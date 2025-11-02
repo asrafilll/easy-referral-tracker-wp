@@ -62,8 +62,14 @@ jQuery(document).ready(function($) {
 		const borderColor = $('#ert_qr_border_color').val() || '#E5E7EB';
 		const referralCode = 'preview123'; // Example referral code
 
+		// Normalize base URL - ensure trailing slash
+		let normalizedUrl = baseUrl;
+		if (!normalizedUrl.endsWith('/') && !normalizedUrl.includes('?')) {
+			normalizedUrl += '/';
+		}
+		
 		// Build final URL
-		const finalUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'r=' + referralCode;
+		const finalUrl = normalizedUrl + (normalizedUrl.includes('?') ? '&' : '?') + 'r=' + referralCode;
 
 		// Generate QR code URL using QR Server API
 		const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl) + '&ecc=M&margin=2';
