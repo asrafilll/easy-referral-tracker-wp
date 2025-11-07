@@ -264,5 +264,74 @@ if (!defined('ABSPATH')) {
 				</ul>
 			</div>
 		</div>
+
+		<!-- QR Cache Management Section -->
+		<div class="ert-settings-section" style="margin-top: 30px;">
+			<h2><?php esc_html_e('QR Code Cache Management', 'easyreferraltracker'); ?></h2>
+			
+			<?php
+			$qr_cache = new ERT_QR_Cache();
+			$stats = $qr_cache->get_stats();
+			?>
+			
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e('Cache Statistics', 'easyreferraltracker'); ?></th>
+					<td>
+						<p><strong><?php esc_html_e('Cached QR Codes:', 'easyreferraltracker'); ?></strong> <?php echo esc_html($stats['count']); ?></p>
+						<p><strong><?php esc_html_e('Total Size:', 'easyreferraltracker'); ?></strong> <?php echo esc_html($stats['size_formatted']); ?></p>
+						<p><strong><?php esc_html_e('Directory:', 'easyreferraltracker'); ?></strong> <code><?php echo esc_html($stats['directory']); ?></code></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e('Clear Cache', 'easyreferraltracker'); ?></th>
+					<td>
+						<button type="button" id="ert-clear-qr-cache" class="button button-secondary">
+							<?php esc_html_e('Clear All QR Codes', 'easyreferraltracker'); ?>
+						</button>
+						<p class="description">
+							<?php esc_html_e('This will delete all cached QR codes. They will be regenerated on next visit.', 'easyreferraltracker'); ?>
+						</p>
+						<div id="ert-clear-cache-result" style="margin-top: 10px;"></div>
+					</td>
+				</tr>
+			</table>
+		</div>
 	</div>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+	$('#ert-clear-qr-cache').on('click', function() {
+		var button = $(this);
+		var resultDiv = $('#ert-clear-cache-result');
+		
+		button.prop('disabled', true).text('<?php esc_attr_e('Clearing...', 'easyreferraltracker'); ?>');
+		resultDiv.html('');
+		
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'ert_clear_qr_cache',
+				nonce: '<?php echo wp_create_nonce('ert_clear_qr_cache'); ?>'
+			},
+			success: function(response) {
+				if (response.success) {
+					resultDiv.html('<div class="notice notice-success inline"><p>' + response.data.message + '</p></div>');
+					setTimeout(function() {
+						location.reload();
+					}, 2000);
+				} else {
+					resultDiv.html('<div class="notice notice-error inline"><p>' + response.data.message + '</p></div>');
+					button.prop('disabled', false).text('<?php esc_attr_e('Clear All QR Codes', 'easyreferraltracker'); ?>');
+				}
+			},
+			error: function() {
+				resultDiv.html('<div class="notice notice-error inline"><p><?php esc_html_e('An error occurred. Please try again.', 'easyreferraltracker'); ?></p></div>');
+				button.prop('disabled', false).text('<?php esc_attr_e('Clear All QR Codes', 'easyreferraltracker'); ?>');
+			}
+		});
+	});
+});
+</script>

@@ -3,7 +3,7 @@
  * Plugin Name: EasyReferralTracker
  * Plugin URI: https://github.com/asrafilll/easyreferraltracker
  * Description: Privacy-focused referral tracking system for app downloads with analytics dashboard and dynamic QR codes
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: EasyReferralTracker Team
  * Author URI: https://github.com/asrafilll/easyreferraltracker
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('EASYREFERRALTRACKER_VERSION', '1.0.0');
+define('EASYREFERRALTRACKER_VERSION', '1.1.0');
 define('EASYREFERRALTRACKER_DB_VERSION', '1.0.0');
 define('EASYREFERRALTRACKER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('EASYREFERRALTRACKER_PLUGIN_URL', plugin_dir_url(__FILE__));

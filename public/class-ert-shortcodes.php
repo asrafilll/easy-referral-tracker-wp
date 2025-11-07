@@ -21,10 +21,20 @@ if (!defined('ABSPATH')) {
 class ERT_Shortcodes {
 
 	/**
+	 * QR Cache instance
+	 *
+	 * @var ERT_QR_Cache|null
+	 */
+	private ?ERT_QR_Cache $qr_cache = null;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
 		add_shortcode('easyreferraltracker_qr', array($this, 'render_qr_code'));
+		
+		// Initialize QR cache
+		$this->qr_cache = new ERT_QR_Cache();
 	}
 
 	/**
@@ -48,26 +58,34 @@ class ERT_Shortcodes {
 	}
 
 	/**
-	 * Generate QR code URL server-side
+	 * Generate QR code URL using local cache
 	 *
 	 * @param string $base_url Base URL for QR code
 	 * @param int    $size     QR code size
 	 * @param string $referral_code Referral code to include
-	 * @return string QR code image URL
+	 * @return string|false QR code image URL or false on failure
 	 */
-	private function generate_qr_url(string $base_url, int $size, string $referral_code): string {
-		// Normalize base URL - ensure trailing slash
-		$normalized_url = $base_url;
-		if (!str_ends_with($normalized_url, '/') && !str_contains($normalized_url, '?')) {
-			$normalized_url .= '/';
+	private function generate_qr_url(string $base_url, int $size, string $referral_code) {
+		// Try to get cached QR or generate new one
+		$qr_url = $this->qr_cache->get_or_generate_qr($referral_code, $base_url, $size);
+
+		// Fallback to external API if local generation fails
+		if (false === $qr_url) {
+			// Normalize base URL - ensure trailing slash
+			$normalized_url = $base_url;
+			if (!str_ends_with($normalized_url, '/') && !str_contains($normalized_url, '?')) {
+				$normalized_url .= '/';
+			}
+
+			// Build final URL with referral code
+			$separator = str_contains($normalized_url, '?') ? '&' : '?';
+			$final_url = $normalized_url . $separator . 'r=' . urlencode($referral_code);
+
+			// Fallback to external API
+			$qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . urlencode($final_url);
 		}
 
-		// Build final URL with referral code
-		$separator = str_contains($normalized_url, '?') ? '&' : '?';
-		$final_url = $normalized_url . $separator . 'r=' . urlencode($referral_code);
-
-		// Generate QR code URL using QR Server API
-		return 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . urlencode($final_url);
+		return $qr_url;
 	}
 
 	/**

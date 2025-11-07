@@ -4,7 +4,7 @@ Tags: referral, tracking, analytics, qr-code, app-download, gdpr, privacy, marke
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.2
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -146,7 +146,7 @@ Yes! You can customize size (100-500px), label text, base URL, colors, padding, 
 
 = Does this work with caching plugins? =
 
-Yes! EasyReferralTracker is compatible with popular caching plugins (W3 Total Cache, WP Rocket, etc.) because it uses client-side JavaScript for link modification.
+Yes! EasyReferralTracker is fully compatible with LiteSpeed Cache, Cloudflare, W3 Total Cache, WP Rocket, and other popular caching solutions. QR codes are generated locally and cached as static PNG files for maximum performance.
 
 = How long do referral cookies last? =
 
@@ -179,6 +179,18 @@ EasyReferralTracker still works! We don't use tracking pixels or external analyt
 = Can I use multiple shortcodes? =
 
 Yes! Use as many QR codes as you want. Each can have custom settings: `[easyreferraltracker_qr size="400" label="Download Now"]`
+
+= How does QR code caching work? =
+
+When a visitor with a referral code views a page with a QR code:
+1. **First visit:** QR code is generated locally using PHP and saved to `/wp-content/uploads/ert-qr/`
+2. **Subsequent visits:** The cached PNG file is served directly (100x faster!)
+3. **Cache management:** Clear cache anytime from Settings page
+4. **Auto-cleanup:** Old QR codes (90+ days) are automatically deleted weekly
+
+= How much disk space do QR codes use? =
+
+Very little! Each QR code is ~1-3KB. Even with 1,000 unique referral codes, you'll only use ~3MB of disk space.
 
 == Screenshots ==
 
@@ -239,6 +251,8 @@ All cookies use secure flags: HTTPOnly, Secure (on HTTPS), SameSite.
 * JavaScript size: ~2KB (inline, no external requests)
 * Database growth: ~18MB per year (1,000 visits/month)
 * Memory usage: +5MB
+* QR code generation: 500ms first time, 5ms cached
+* QR cache size: ~1-3KB per unique referral code
 
 ### Security
 
@@ -247,7 +261,8 @@ All cookies use secure flags: HTTPOnly, Secure (on HTTPS), SameSite.
 * WordPress nonces prevent CSRF
 * Strict input validation
 * Two-layer rate limiting
-* No external dependencies
+* QR cache directory protected with .htaccess
+* No external dependencies for QR generation
 
 ### Compatibility
 
@@ -257,7 +272,7 @@ All cookies use secure flags: HTTPOnly, Secure (on HTTPS), SameSite.
 * MySQL 5.6+
 * Popular themes (Astra, GeneratePress, Hello, etc.)
 * Page builders (Elementor, Beaver Builder, etc.)
-* Caching plugins (W3 Total Cache, WP Rocket, etc.)
+* Caching plugins (LiteSpeed Cache, Cloudflare, W3 Total Cache, WP Rocket, etc.)
 
 ### Contributing
 
@@ -294,12 +309,9 @@ Want to translate EasyReferralTracker into your language? Join us on [GitHub](ht
 
 == Third-Party Services ==
 
-EasyReferralTracker uses Google Charts API for QR code generation. QR codes are generated client-side in the user's browser. No data is sent to Google servers except the URL to encode in the QR code.
+**Version 1.1.0+:** EasyReferralTracker does NOT use any third-party services. QR codes are generated locally on your server using the PHPQRCode library (LGPL 3.0). All data stays on your WordPress site.
 
-* Service: Google Charts API
-* Privacy Policy: https://policies.google.com/privacy
-* Terms of Service: https://policies.google.com/terms
-* Usage: QR code generation only (optional feature)
+**Version 1.0.0 (legacy):** Used Google Charts API for QR code generation. This has been replaced with local generation for better performance and privacy.
 
 == Developer Hooks ==
 

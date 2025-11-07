@@ -44,6 +44,30 @@ delete_option('ert_db_version');
 $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_ert_%'");
 $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_ert_%'");
 
+// Clear scheduled cron jobs
+$timestamp = wp_next_scheduled('ert_cleanup_qr_codes');
+if ($timestamp) {
+	wp_unschedule_event($timestamp, 'ert_cleanup_qr_codes');
+}
+
+// Delete QR code cache directory
+$upload_dir = wp_upload_dir();
+$qr_cache_dir = trailingslashit($upload_dir['basedir']) . 'ert-qr';
+
+if (file_exists($qr_cache_dir)) {
+	// Delete all QR code files
+	$files = glob($qr_cache_dir . '/*');
+	if ($files) {
+		foreach ($files as $file) {
+			if (is_file($file)) {
+				@unlink($file);
+			}
+		}
+	}
+	// Remove directory
+	@rmdir($qr_cache_dir);
+}
+
 // Note: We don't delete cookies as they are client-side and will expire naturally
 // Cookies: ert_referral, ert_tracked_*, ert_rate_limit_user
 

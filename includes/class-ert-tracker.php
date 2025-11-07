@@ -36,6 +36,25 @@ class ERT_Tracker {
 		// Hook into WordPress
 		add_action('init', array($this, 'track_referral'), 1);
 		add_action('wp_footer', array($this, 'enqueue_tracker_script'), 999);
+		
+		// LiteSpeed Cache compatibility
+		add_action('init', array($this, 'setup_litespeed_cache'), 5);
+	}
+
+	/**
+	 * Setup LiteSpeed Cache compatibility
+	 *
+	 * @return void
+	 */
+	public function setup_litespeed_cache(): void {
+		// Check if LiteSpeed Cache plugin is active
+		if (class_exists('LiteSpeed_Cache_API')) {
+			// Mark pages with referral codes as cacheable
+			if (isset($_GET['r'])) {
+				// Vary cache by 'r' parameter
+				do_action('litespeed_vary_add', 'ert_referral_' . sanitize_text_field($_GET['r']));
+			}
+		}
 	}
 
 	/**

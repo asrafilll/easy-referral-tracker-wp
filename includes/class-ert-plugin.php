@@ -173,6 +173,29 @@ class ERT_Plugin {
 
 		// Check database version
 		add_action('admin_init', array($this->database, 'check_db_version'));
+
+		// Register QR cleanup cron
+		add_action('ert_cleanup_qr_codes', array($this, 'cleanup_qr_codes_cron'));
+	}
+
+	/**
+	 * Cleanup old QR codes (cron job)
+	 *
+	 * @return void
+	 */
+	public function cleanup_qr_codes_cron(): void {
+		$qr_cache = new ERT_QR_Cache();
+		$deleted = $qr_cache->cleanup_old(90); // Delete QR codes older than 90 days
+
+		// Log cleanup
+		if ($this->error_handler) {
+			$this->error_handler->log_error(
+				'QR code cleanup completed',
+				ERT_Error_Handler::LEVEL_INFO,
+				['deleted_count' => $deleted],
+				'ERT_Plugin::cleanup_qr_codes_cron'
+			);
+		}
 	}
 
 	/**
@@ -207,6 +230,9 @@ class ERT_Plugin {
 		// Create database tables
 		$this->database->create_tables();
 
+		// Initialize QR cache to create directories
+		$qr_cache = new ERT_QR_Cache();
+
 		// Flush rewrite rules
 		flush_rewrite_rules();
 
@@ -222,6 +248,11 @@ class ERT_Plugin {
 		add_option('ert_qr_border_radius', 10, '', 'no');
 		add_option('ert_qr_container_color', '#FFFFFF', '', 'no');
 		add_option('ert_qr_border_color', '#E5E7EB', '', 'no');
+		
+		// Schedule cleanup cron job
+		if (!wp_next_scheduled('ert_cleanup_qr_codes')) {
+			wp_schedule_event(time(), 'weekly', 'ert_cleanup_qr_codes');
+		}
 	}
 
 	/**
@@ -235,6 +266,12 @@ class ERT_Plugin {
 		// Security: Check user capabilities
 		if (!current_user_can('activate_plugins')) {
 			return;
+		}
+
+		// Clear scheduled cron jobs
+		$timestamp = wp_next_scheduled('ert_cleanup_qr_codes');
+		if ($timestamp) {
+			wp_unschedule_event($timestamp, 'ert_cleanup_qr_codes');
 		}
 
 		// Flush rewrite rules
