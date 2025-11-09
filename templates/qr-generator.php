@@ -384,8 +384,9 @@ jQuery(document).ready(function($) {
         // Build final URL
         const finalUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'r=' + referralCode;
         
-        // Generate QR code URL using QR Server API (more reliable than Google Charts)
-        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(finalUrl);
+        // Note: QR code preview disabled to avoid external API calls
+        // In production, QR codes are generated locally using PHPQRCode
+        const qrUrl = 'data:image/svg+xml;base64,' + btoa('<svg width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" font-family="Arial" font-size="12" fill="#666">QR Preview Disabled</text></svg>');
         
         // Update preview container styling
         const $previewContainer = $('#ert-preview-container .easyreferraltracker-qr-container');

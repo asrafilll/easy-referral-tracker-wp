@@ -21,11 +21,17 @@ if (!defined('ABSPATH')) {
 class ERT_QR_Generator {
 
 	/**
+	 * QR Cache instance
+	 *
+	 * @var ERT_QR_Cache
+	 */
+	private ERT_QR_Cache $qr_cache;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
-		// Constructor intentionally left empty
-		// All initialization happens in render_page()
+		$this->qr_cache = new ERT_QR_Cache();
 	}
 
 	/**
@@ -61,25 +67,24 @@ class ERT_QR_Generator {
 	}
 
 	/**
-	 * Generate QR code URL
+	 * Generate QR code URL using local cache
 	 *
 	 * @param string $url          URL to encode
 	 * @param string $referral     Referral code
 	 * @param int    $size         QR code size
-	 * @return string QR code image URL
+	 * @return string|null QR code image URL or null on failure
 	 */
-	public function generate_qr_url(string $url, string $referral = 'test', int $size = 300): string {
-		// Normalize URL - ensure trailing slash
-		$normalized_url = $url;
-		if (!str_ends_with($normalized_url, '/') && strpos($normalized_url, '?') === false) {
-			$normalized_url .= '/';
+	public function generate_qr_url(string $url, string $referral = 'test', int $size = 300): ?string {
+		// Use local QR cache to generate QR code
+		$qr_url = $this->qr_cache->get_or_generate_qr($referral, $url, $size);
+		
+		// Return null if generation fails
+		if (false === $qr_url) {
+			error_log('EasyReferralTracker: Admin QR code generation failed for referral: ' . $referral);
+			return null;
 		}
 		
-		// Build final URL with referral
-		$final_url = $normalized_url . (strpos($normalized_url, '?') !== false ? '&' : '?') . 'r=' . urlencode($referral);
-
-		// Generate QR code URL using QR Server API
-		return 'https://api.qrserver.com/v1/create-qr-code/?size=' . absint($size) . 'x' . absint($size) . '&data=' . urlencode($final_url) . '&ecc=M&margin=2';
+		return $qr_url;
 	}
 
 	/**

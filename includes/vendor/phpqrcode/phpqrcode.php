@@ -219,7 +219,7 @@
                 $frame = QRspec::newFrame($a);
                 if (QR_IMAGE) {
                     $fileName = QR_CACHE_DIR.'frame_'.$a.'.png';
-                    QRimage::png(self::binarize($frame), $fileName, 1, 0);
+                    QRimage::png(self::binarize($frame), 0x000000, 0xffffff, $fileName, 1, 0);
                 }
 				
 				$width = count($frame);
@@ -3342,7 +3342,7 @@
                 
                 $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$this->margin));
                 
-                QRimage::png($tab, $outfile, min(max(1, $this->size), $maxSize), $this->margin,$saveandprint, $this->back_color, $this->fore_color);
+                QRimage::png($tab, $this->back_color, $this->fore_color, $outfile, min(max(1, $this->size), $maxSize), $this->margin, $saveandprint);
             
             } catch (Exception $e) {
             
@@ -3390,7 +3390,7 @@
                 
                 $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$this->margin));
 
-                QRvect::svg($tab, $outfile, min(max(1, $this->size), $maxSize), $this->margin,$saveandprint, $this->back_color, $this->fore_color);
+                QRvect::svg($tab, $this->back_color, $this->fore_color, $outfile, min(max(1, $this->size), $maxSize), $this->margin, $saveandprint);
             
             } catch (Exception $e) {
             

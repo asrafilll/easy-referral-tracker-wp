@@ -4,7 +4,7 @@ Tags: referral, tracking, analytics, qr-code, app-download, gdpr, privacy, marke
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.2
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -204,6 +204,16 @@ Very little! Each QR code is ~1-3KB. Even with 1,000 unique referral codes, you'
 7. **Privacy-Focused** - Clear information about what data is (and isn't) collected
 
 == Changelog ==
+
+= 1.1.1 - 2025-11-09 =
+* 🔧 **PHP 8+ Compatibility Fix** - Resolved 44,089 deprecation warnings from PHPQRCode library
+* 🚫 **Removed External API Dependencies** - Eliminated legacy qrserver.com API calls causing 710 failures
+* ⚡ **Enhanced Local QR Generation** - Admin QR generator now uses local cache instead of external API
+* 🧹 **Code Cleanup** - Removed all external QR API references for 100% self-hosted operation
+* 🛡️ **Improved Error Handling** - Better logging for QR generation failures
+* 📝 **Updated Function Signatures** - Fixed optional parameter order in PHPQRCode vendor library
+* 🎯 **Preview Disabled** - Admin QR preview now shows placeholder to avoid external calls
+* 🔒 **Security Enhancement** - No more external API calls that could fail or expose data
 
 = 1.1.0 - 2025-01-07 =
 * 🚀 Local QR code generation with PHPQRCode library

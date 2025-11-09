@@ -69,20 +69,10 @@ class ERT_Shortcodes {
 		// Try to get cached QR or generate new one
 		$qr_url = $this->qr_cache->get_or_generate_qr($referral_code, $base_url, $size);
 
-		// Fallback to external API if local generation fails
+		// Return false if local generation fails - no external API fallback
 		if (false === $qr_url) {
-			// Normalize base URL - ensure trailing slash
-			$normalized_url = $base_url;
-			if (!str_ends_with($normalized_url, '/') && !str_contains($normalized_url, '?')) {
-				$normalized_url .= '/';
-			}
-
-			// Build final URL with referral code
-			$separator = str_contains($normalized_url, '?') ? '&' : '?';
-			$final_url = $normalized_url . $separator . 'r=' . urlencode($referral_code);
-
-			// Fallback to external API
-			$qr_url = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . urlencode($final_url);
+			error_log('EasyReferralTracker: QR code generation failed for referral code: ' . $referral_code);
+			return false;
 		}
 
 		return $qr_url;

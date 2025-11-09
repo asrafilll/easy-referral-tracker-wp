@@ -510,7 +510,7 @@
                 
                 $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$this->margin));
                 
-                QRimage::png($tab, $outfile, min(max(1, $this->size), $maxSize), $this->margin,$saveandprint, $this->back_color, $this->fore_color);
+                QRimage::png($tab, $this->back_color, $this->fore_color, $outfile, min(max(1, $this->size), $maxSize), $this->margin, $saveandprint);
             
             } catch (Exception $e) {
             
@@ -558,7 +558,7 @@
                 
                 $maxSize = (int)(QR_PNG_MAXIMUM_SIZE / (count($tab)+2*$this->margin));
 
-                QRvect::svg($tab, $outfile, min(max(1, $this->size), $maxSize), $this->margin,$saveandprint, $this->back_color, $this->fore_color);
+                QRvect::svg($tab, $this->back_color, $this->fore_color, $outfile, min(max(1, $this->size), $maxSize), $this->margin, $saveandprint);
             
             } catch (Exception $e) {
             

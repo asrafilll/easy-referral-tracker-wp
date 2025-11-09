@@ -137,7 +137,7 @@
         }
         
         //----------------------------------------------------------------------
-        public static function svg($frame, $filename = false, $pixelPerPoint = 4, $outerFrame = 4,$saveandprint=FALSE, $back_color, $fore_color) 
+        public static function svg($frame, $back_color, $fore_color, $filename = false, $pixelPerPoint = 4, $outerFrame = 4, $saveandprint = false) 
         {
             $vect = self::vectSVG($frame, $pixelPerPoint, $outerFrame, $back_color, $fore_color);
             
